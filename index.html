@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#5A3825">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Confeitô">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Confeito · Calculadora de Preço</title>
 <style>
 :root{
@@ -172,6 +178,13 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
 .auth-tabs button.on{background:var(--cocoa);color:#fff}
 .auth-err{color:var(--red);font-size:13px;font-weight:600;margin-top:10px}
 .auth-busy{text-align:center;color:var(--muted);font-size:13px;margin-top:12px;font-weight:600}
+#splash{position:fixed;inset:0;z-index:200;background:var(--sugar);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;transition:opacity .45s ease}
+#splash.hide{opacity:0;pointer-events:none}
+#splash img{width:128px;height:128px;border-radius:28px;box-shadow:var(--shadow)}
+#splash .sp-name{font-size:26px;font-weight:800;color:var(--cocoa);letter-spacing:-.5px}
+#splash .sp-name b{color:var(--rasp)}
+#splash .sp-sub{font-size:13px;color:var(--muted);margin-top:-8px}
 /* config */
 .cfg-sec{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--rasp);font-weight:800;margin:22px 2px 8px}
 .cfg-sec:first-child{margin-top:4px}
@@ -191,6 +204,11 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
 </style>
 </head>
 <body>
+<div id="splash">
+  <img src="icon-192.png" alt="Confeitô">
+  <div class="sp-name">Confei<b>tô</b></div>
+  <div class="sp-sub">preço certo, lucro certo</div>
+</div>
 <div id="auth">
   <div class="auth-card">
     <div class="auth-mark">Confei<b>tô</b></div>
@@ -869,6 +887,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 /* ---------- start ---------- */
 sess=loadSess();
 if(sess&&sess.user)bootLogged();else showAuth();
+window.addEventListener("load",()=>setTimeout(()=>{const s=document.getElementById("splash");if(s){s.classList.add("hide");setTimeout(()=>s.remove(),500);}},1000));
 </script>
 </body>
 </html>
