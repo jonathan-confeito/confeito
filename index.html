@@ -247,7 +247,7 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
   <button data-tab="insumos" class="on"><span class="ic">🧺</span>Insumos</button>
   <button data-tab="receitas"><span class="ic">📋</span>Receitas</button>
   <button data-tab="precos"><span class="ic">🏷️</span>Preços</button>
-  <button data-tab="estoque"><span class="ic">📦</span>Estoque</button>
+  <button data-tab="estoque"><span class="ic">📦</span>Negócio</button>
   <button data-tab="ajustes"><span class="ic">⚙️</span>Ajustes</button>
 </nav>
 
@@ -770,12 +770,13 @@ function render_estoque(){
   const vendTotal=state.produtos.reduce((s,p)=>s+somaQtd(movMes(p,"vendeu")),0);
   const lucroTotal=state.produtos.reduce((s,p)=>s+lucroMes(p),0);
   const ct=canalTotais(),lows=state.produtos.filter(baixo).length;
-  let h=`<h2 class="title">Estoque e vendas · ${mes}</h2>
+  let h=`<h2 class="title">Resumo do negócio · ${mes}</h2>
+    <p class="hint" style="margin:-6px 0 14px">Acompanhe vendas, faturamento, lucro estimado e estoque do mês.</p>
     <div class="card" style="background:var(--cocoa);border:none">
       <div class="est-stats">
         <div><div class="est-k">Vendidos</div><div class="est-v">${fmt(vendTotal)}</div></div>
         <div><div class="est-k">Faturamento</div><div class="est-v">${brl(fatTotal)}</div></div>
-        <div><div class="est-k">Lucro</div><div class="est-v" style="color:${lucroTotal>=0?'#9BE3B4':'#F2A9A0'}">${brl(lucroTotal)}</div></div>
+        <div><div class="est-k">Lucro estimado</div><div class="est-v" style="color:${lucroTotal>=0?'#9BE3B4':'#F2A9A0'}">${brl(lucroTotal)}</div></div>
       </div>
       <div class="est-canais">iFood ${fmt(ct["iFood"].un)} · ${brl(ct["iFood"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Cartão ${fmt(ct["Cartão"].un)} · ${brl(ct["Cartão"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Pix/Din. ${fmt(ct["Pix / Dinheiro"].un)} · ${brl(ct["Pix / Dinheiro"].fat)}</div>
     </div>`;
@@ -788,7 +789,7 @@ function render_estoque(){
       <div style="display:flex;gap:11px;align-items:center;min-width:0">
       ${p.foto?`<img class="thumb" src="${p.foto}" alt="">`:`<div class="thumb">🍰</div>`}
       <div style="min-width:0"><div class="name">${esc(p.nome)} ${tag}</div>
-      <div class="meta">no mês: fiz ${fmt(fez)} · vendi ${fmt(vend)} · lucro ${brl(lucroMes(p))}</div></div></div>
+      <div class="meta">no mês: fiz ${fmt(fez)} · vendi ${fmt(vend)} · lucro estimado ${brl(lucroMes(p))}</div></div></div>
       <div style="text-align:right"><div class="big" style="${est<=0?'color:var(--red)':''}">${fmt(est)}</div><div class="meta">em estoque</div></div></div>
       <div class="row-acts">
         <button class="btn sm" onclick="movSheet('${p.id}','fez')">+ Fiz</button>
