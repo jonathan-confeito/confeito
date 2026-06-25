@@ -761,6 +761,12 @@ const lucroMes=p=>movMes(p,"vendeu").reduce((s,m)=>{const pr=m.preco||0,fr=canal
 function canalTotais(){const t={"iFood":{un:0,fat:0},"Cartão":{un:0,fat:0},"Pix / Dinheiro":{un:0,fat:0}};
   state.produtos.forEach(p=>movMes(p,"vendeu").forEach(m=>{const c=m.canal||"iFood";if(!t[c])t[c]={un:0,fat:0};t[c].un+=m.qtd;t[c].fat+=m.qtd*(m.preco||0);}));return t;}
 const baixo=p=>(p.estoque||0)<=0||(p.alertaEstoque>0&&(p.estoque||0)<=p.alertaEstoque);
+function destaquesMes(){
+  const dados=state.produtos.map(p=>({produto:p,qtd:num(somaQtd(movMes(p,"vendeu"))),fat:fatMes(p),lucro:lucroMes(p)})).filter(x=>x.qtd>0);
+  if(!dados.length)return null;
+  const maior=campo=>dados.reduce((a,b)=>b[campo]>a[campo]?b:a);
+  return{vendido:maior("qtd"),faturamento:maior("fat"),lucro:maior("lucro")};
+}
 
 function render_estoque(){
   const el=document.getElementById("sc-estoque");
@@ -780,6 +786,23 @@ function render_estoque(){
       </div>
       <div class="est-canais">iFood ${fmt(ct["iFood"].un)} · ${brl(ct["iFood"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Cartão ${fmt(ct["Cartão"].un)} · ${brl(ct["Cartão"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Pix/Din. ${fmt(ct["Pix / Dinheiro"].un)} · ${brl(ct["Pix / Dinheiro"].fat)}</div>
     </div>`;
+  const destaques=destaquesMes();
+  h+=`<div class="sug-lab" style="margin:16px 2px 8px">Destaques do mês</div>`;
+  if(!destaques)h+=`<div class="card"><p class="hint" style="margin:0">Registre suas vendas para ver os destaques do mês.</p></div>`;
+  else h+=`<div class="card">
+    <div class="chan" style="border-top:none;padding-top:0">
+      <div style="min-width:0"><div class="chan-name">Produto mais vendido</div><div class="chan-fee">${esc(destaques.vendido.produto.nome)}</div></div>
+      <div class="chan-mid"><div class="chan-luc">${fmt(destaques.vendido.qtd)} un</div></div>
+    </div>
+    <div class="chan">
+      <div style="min-width:0"><div class="chan-name">Maior faturamento</div><div class="chan-fee">${esc(destaques.faturamento.produto.nome)}</div></div>
+      <div class="chan-mid"><div class="chan-luc">${brl(destaques.faturamento.fat)}</div></div>
+    </div>
+    <div class="chan" style="padding-bottom:0">
+      <div style="min-width:0"><div class="chan-name">Maior lucro estimado</div><div class="chan-fee">${esc(destaques.lucro.produto.nome)}</div></div>
+      <div class="chan-mid"><div class="chan-luc" style="color:${destaques.lucro.lucro>=0?'var(--pist)':'var(--red)'}">${brl(destaques.lucro.lucro)}</div></div>
+    </div>
+  </div>`;
   if(lows)h+=`<div class="low-note">⚠ ${lows} ${lows>1?"produtos":"produto"} com estoque baixo ou esgotado</div>`;
   h+=`<button class="btn ghost" style="width:100%;margin-bottom:11px" onclick="openHistMeses()">📅 Ver meses anteriores</button>`;
   state.produtos.forEach(p=>{
