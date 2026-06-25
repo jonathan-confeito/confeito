@@ -628,14 +628,21 @@ const CANAIS=[
 const canalByKey=k=>CANAIS.find(c=>c.key===k);
 function precoCanal(id,nome){const p=state.produtos.find(p=>p.id===id);return p.precos&&p.precos[nome]?p.precos[nome]:"";}
 function setPreco(id,key,val){const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);if(!p.precos)p.precos={};p.precos[c.nome]=num(val);save();updPreco(id,key);}
+function alertaPrecoCanal(preco,luc,mg){
+  if(preco<=0)return{texto:"Defina um preço para ver se esse produto dá lucro.",cor:"var(--muted)"};
+  if(luc<0)return{texto:"Atenção: este preço pode dar prejuízo.",cor:"var(--red)"};
+  if(luc>0&&mg<.1)return{texto:"Margem baixa. Confira se esse preço compensa.",cor:"#9A6E00"};
+  return null;
+}
 function updPreco(id,key){
   const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);
   const box=document.getElementById("res-"+id+"-"+key);if(!box)return;
   const ct=custoTotal(p),preco=p.precos?num(p.precos[c.nome]):0;
-  if(preco<=0){box.innerHTML='<span style="color:var(--muted)">defina o preço pra ver quanto sobra</span>';return;}
+  if(preco<=0){const alerta=alertaPrecoCanal(preco,0,0);box.innerHTML=`<span style="color:${alerta.cor}">${alerta.texto}</span>`;return;}
   const frac=c.frac(),fee=preco*frac,imp=preco*C().aliquota/100,rec=preco-fee,luc=rec-ct-imp,mg=luc/preco;
   let cls="b-low";if(mg>=C().margem/100*0.8)cls="b-ok";else if(luc>0)cls="b-mid";
-  box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>`;
+  const alerta=alertaPrecoCanal(preco,luc,mg);
+  box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>${alerta?`<span style="width:100%;color:${alerta.cor}">${alerta.texto}</span>`:""}`;
 }
 
 /* ---------- AJUSTES ---------- */
