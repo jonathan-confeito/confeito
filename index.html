@@ -31,12 +31,14 @@ body{
 /* header */
 header{
   position:sticky;top:0;z-index:30;background:var(--cocoa);color:#fff;
-  padding:14px 18px 13px;display:flex;align-items:baseline;gap:10px;
+  padding:14px 18px 13px;display:flex;align-items:center;gap:10px;
   box-shadow:0 2px 12px rgba(90,56,37,.18);
 }
 header .mark{font-size:21px;font-weight:800;letter-spacing:-.5px}
 header .mark b{color:#FFC7DE;font-weight:800}
 header .sub{font-size:12px;color:#E6D5C7;margin-left:auto;font-weight:500}
+header .head-menu{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#fff;
+  min-height:34px;padding:7px 10px;border-radius:10px;font-size:12px;font-weight:800}
 /* screen */
 main{padding:16px 16px 8px}
 .screen{display:none;animation:fade .18s ease}
@@ -201,6 +203,34 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
 .cfg-out{background:#F3E9DF;border-radius:12px;padding:12px 14px;margin-top:6px;font-weight:700;color:var(--cocoa);display:flex;justify-content:space-between}
 .danger-zone{margin:26px 0 8px;display:flex;gap:8px}
 .danger-zone button{flex:1}
+/* loja preview */
+.loja-hero{background:linear-gradient(145deg,#FFF8EF 0%,#F3E2D1 55%,#E8C9B2 100%);
+  border:1px solid #EAD8C5;border-radius:18px;padding:17px;margin-bottom:12px;box-shadow:var(--shadow)}
+.loja-hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:13px}
+.loja-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;font-weight:900;color:var(--rasp-dk)}
+.loja-hero h2{margin:3px 0 6px;font-size:25px;letter-spacing:-.8px;color:var(--cocoa)}
+.loja-hero p{margin:0;color:var(--cocoa-soft);font-size:13.5px;line-height:1.4}
+.loja-badge{background:#fff;border:1px solid var(--line);color:var(--cocoa-soft);padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;white-space:nowrap}
+.loja-actions{display:flex;gap:8px;margin-top:15px;align-items:center}
+.loja-actions .btn{flex:1}
+.loja-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:9px}
+.loja-preview{overflow:hidden;padding:0}
+.loja-public-top{background:linear-gradient(135deg,#5A3825,#9D6A48);color:#fff;padding:11px 14px;font-size:13px;font-weight:900}
+.loja-cover{height:86px;background:radial-gradient(circle at 18% 24%,#FFE0ED 0 18%,transparent 19%),
+  linear-gradient(135deg,#F8E8D8 0%,#E8C4A7 58%,#C58A62 100%);position:relative}
+.loja-avatar{position:absolute;left:15px;bottom:-24px;width:58px;height:58px;border-radius:50%;background:#fff;
+  border:4px solid #fff;display:flex;align-items:center;justify-content:center;font-size:25px;box-shadow:var(--shadow)}
+.loja-public-body{padding:33px 15px 15px}
+.loja-status{display:inline-flex;align-items:center;gap:6px;background:#E3F3EA;color:var(--pist);border-radius:999px;padding:5px 9px;font-size:11.5px;font-weight:900;margin:8px 0 12px}
+.loja-link{background:#FAF3EC;border:1px dashed #DEC6B5;color:var(--cocoa-soft);border-radius:11px;padding:9px 10px;font-size:12px;font-weight:800;margin-top:11px;word-break:break-word}
+.loja-benefits{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:11px}
+.loja-benefit{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;box-shadow:var(--shadow)}
+.loja-benefit b{display:block;color:var(--cocoa);font-size:14px;margin-bottom:4px}
+.loja-benefit span{display:block;color:var(--muted);font-size:12.5px;line-height:1.4}
+.loja-check{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.loja-check div{background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12.5px;font-weight:800;color:var(--cocoa-soft)}
+.loja-safe{background:#F5EFE8;border-color:#E8D6C7}
+@media (max-width:380px){.loja-actions{flex-direction:column}.loja-actions .btn{width:100%}.loja-check{grid-template-columns:1fr}}
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--cocoa);color:#fff;
   padding:11px 18px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:80;opacity:0;pointer-events:none;
   transition:opacity .2s, transform .2s;max-width:90%}
@@ -234,12 +264,14 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
   <header>
     <span class="mark">Confei<b>tô</b></span>
     <span class="sub" id="subhead">preço certo, lucro certo</span>
+    <button class="head-menu" type="button" onclick="setTab('ajustes')" aria-label="Abrir ajustes">Menu</button>
   </header>
   <main>
     <section class="screen on" id="sc-insumos"></section>
     <section class="screen" id="sc-receitas"></section>
     <section class="screen" id="sc-precos"></section>
     <section class="screen" id="sc-estoque"></section>
+    <section class="screen" id="sc-loja"></section>
     <section class="screen" id="sc-ajustes"></section>
   </main>
 </div>
@@ -251,7 +283,7 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
   <button data-tab="receitas"><span class="ic">📋</span>Receitas</button>
   <button data-tab="precos"><span class="ic">🏷️</span>Preços</button>
   <button data-tab="estoque"><span class="ic">📦</span>Negócio</button>
-  <button data-tab="ajustes"><span class="ic">⚙️</span>Ajustes</button>
+  <button data-tab="loja"><span class="ic">🛍️</span>Loja</button>
 </nav>
 
 <div class="scrim" id="scrim"></div>
@@ -415,7 +447,7 @@ function margemReal(p){const mp=num(p.meuPreco);const l=lucroIfood(p);return(mp>
 
 /* ---------- navegação ---------- */
 let tab="insumos";
-const screens={insumos:render_insumos,receitas:render_receitas,precos:render_precos,estoque:render_estoque,ajustes:render_ajustes};
+const screens={insumos:render_insumos,receitas:render_receitas,precos:render_precos,estoque:render_estoque,loja:render_loja,ajustes:render_ajustes};
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function setTab(t){
   tab=t;
@@ -697,6 +729,71 @@ function updPreco(id,key){
   let cls="b-low";if(mg>=C().margem/100*0.8)cls="b-ok";else if(luc>0)cls="b-mid";
   const alerta=alertaPrecoCanal(preco,luc,mg);
   box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>${sugLine}${msgBtn}${alerta?`<span style="width:100%;color:${alerta.cor}">${alerta.texto}</span>`:""}`;
+}
+
+/* ---------- LOJA ---------- */
+function render_loja(){
+  const el=document.getElementById("sc-loja");
+  el.innerHTML=`<div class="loja-hero">
+    <div class="loja-hero-top">
+      <div>
+        <div class="loja-eyebrow">Prévia · Em planejamento</div>
+        <h2>Loja</h2>
+        <p>Monte sua loja online e receba pedidos pelo WhatsApp.</p>
+      </div>
+      <span class="loja-badge">Prévia</span>
+    </div>
+    <div class="loja-actions">
+      <button class="btn primary" onclick="toast('Em breve: sua loja online no Confeitô.')">Criar minha loja</button>
+      <button class="btn ghost" onclick="setTab('ajustes')">Ajustes</button>
+    </div>
+    <div class="loja-note">Loja pública ainda não está ativa. Nenhum dado será publicado agora.</div>
+  </div>
+
+  <div class="card loja-preview">
+    <div class="loja-public-top">Confeitô</div>
+    <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
+    <div class="loja-public-body">
+      <div class="name">Doce Encanto</div>
+      <div class="meta">Bolos, doces e encomendas artesanais.</div>
+      <div class="loja-status">● Aberta para pedidos</div>
+      <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
+      <div class="loja-link">loja.useconfeito.com/doce-encanto</div>
+    </div>
+  </div>
+
+  <div class="loja-benefits">
+    <div class="loja-benefit"><b>Venda com um link profissional</b><span>Compartilhe sua loja com clientes e receba pedidos organizados.</span></div>
+    <div class="loja-benefit"><b>Use seus produtos já cadastrados</b><span>Escolha quais receitas/produtos aparecem na vitrine.</span></div>
+    <div class="loja-benefit"><b>Pedido pronto no WhatsApp</b><span>O cliente monta o carrinho e envia tudo direto para você.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="sug-lab" style="margin-top:0;margin-bottom:8px">O que sua loja terá</div>
+    <div class="loja-check">
+      <div>Logo e capa da sua marca</div>
+      <div>Produtos com foto, descrição e preço</div>
+      <div>Categorias</div>
+      <div>Carrinho simples</div>
+      <div>Retirada ou entrega</div>
+      <div>Pedido enviado pelo WhatsApp</div>
+    </div>
+  </div>
+
+  <div class="card loja-safe">
+    <div class="name">Segurança em primeiro lugar</div>
+    <p class="hint">Esta é uma prévia visual. A loja pública será criada com dados separados para proteger custos, lucro e informações internas.</p>
+  </div>
+
+  <div class="card">
+    <div class="name">Indique e ganhe</div>
+    <p class="hint">Em breve, cada confeiteira terá um link para indicar o Confeitô e ganhar benefícios.</p>
+  </div>
+
+  <div class="card">
+    <div class="name">Plano futuro</div>
+    <p class="hint">Com a Loja Confeitô, o plano poderá ser R$19,90/mês após o período grátis. Sem cobrança ativa agora.</p>
+  </div>`;
 }
 
 /* ---------- AJUSTES ---------- */
