@@ -611,7 +611,7 @@ function render_precos(){
     CANAIS.forEach(c=>{
       const pr=p.precos&&p.precos[c.nome]?p.precos[c.nome]:"";
       h+=`<div class="cpx"><div class="cpx-top">
-        <div style="flex:1;min-width:0"><span class="chan-name">${c.nome}</span><div class="chan-fee">taxa ${fmt(c.frac()*100)}%</div></div>
+        <div style="flex:1;min-width:0"><span class="chan-name">${canalLabel(c.nome)}</span><div class="chan-fee">taxa ${fmt(c.frac()*100)}%</div></div>
         <input class="cpx-in" type="number" inputmode="decimal" value="${pr}" placeholder="0,00" oninput="setPreco('${p.id}','${c.key}',this.value)"></div>
         <div class="cpx-res" id="res-${p.id}-${c.key}"></div></div>`;
     });
@@ -625,6 +625,7 @@ const CANAIS=[
   {key:"cartao",nome:"Cartão",frac:()=>C().taxaCartao/100},
   {key:"pix",nome:"Pix / Dinheiro",frac:()=>C().taxaPix/100}
 ];
+const canalLabel=nome=>nome==="iFood"?"Delivery":nome;
 const canalByKey=k=>CANAIS.find(c=>c.key===k);
 function precoCanal(id,nome){const p=state.produtos.find(p=>p.id===id);return p.precos&&p.precos[nome]?p.precos[nome]:"";}
 function setPreco(id,key,val){const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);if(!p.precos)p.precos={};p.precos[c.nome]=num(val);save();updPreco(id,key);}
@@ -658,10 +659,10 @@ function render_ajustes(){
   <input id="c-aliquota" type="number" inputmode="decimal" value="${c.aliquota}" oninput="setCfg('aliquota',num(this.value))">
   <p class="hint">MEI = 0% (você paga o DAS fixo, que entra nos custos fixos). Simples = sua alíquota, ex.: 6%.</p>
 
-  <div class="cfg-sec">iFood</div>
+  <div class="cfg-sec">Delivery</div>
   <div class="plan-toggle">
     <button class="${c.plano==="Básico"?"on":""}" onclick="setPlano('Básico')">Básico · eu entrego</button>
-    <button class="${c.plano==="Entrega"?"on":""}" onclick="setPlano('Entrega')">Entrega · iFood entrega</button>
+    <button class="${c.plano==="Entrega"?"on":""}" onclick="setPlano('Entrega')">Entrega · delivery faz a entrega</button>
   </div>
   <div class="grid2">
     <div><label>Comissão (%)</label><input id="c-com" type="number" inputmode="decimal" value="${c.ifoodComissao}" oninput="setCfg('ifoodComissao',num(this.value))"></div>
@@ -791,7 +792,7 @@ function render_estoque(){
         <div><div class="est-k">Faturamento</div><div class="est-v">${brl(fatTotal)}</div></div>
         <div><div class="est-k">Lucro estimado</div><div class="est-v" style="color:${lucroTotal>=0?'#9BE3B4':'#F2A9A0'}">${brl(lucroTotal)}</div></div>
       </div>
-      <div class="est-canais">iFood ${fmt(ct["iFood"].un)} · ${brl(ct["iFood"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Cartão ${fmt(ct["Cartão"].un)} · ${brl(ct["Cartão"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Pix/Din. ${fmt(ct["Pix / Dinheiro"].un)} · ${brl(ct["Pix / Dinheiro"].fat)}</div>
+      <div class="est-canais">${canalLabel("iFood")} ${fmt(ct["iFood"].un)} · ${brl(ct["iFood"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Cartão ${fmt(ct["Cartão"].un)} · ${brl(ct["Cartão"].fat)}&nbsp;&nbsp;|&nbsp;&nbsp;Pix/Din. ${fmt(ct["Pix / Dinheiro"].un)} · ${brl(ct["Pix / Dinheiro"].fat)}</div>
     </div>`;
   const destaques=destaquesMes();
   h+=`<div class="sug-lab" style="margin:16px 2px 8px">Destaques do mês</div>`;
@@ -835,7 +836,7 @@ function movSheet(id,tipo){
     <label>Quantas unidades você ${vend?"vendeu":"fez"}?</label>
     <input id="mv-qtd" type="number" inputmode="numeric" value="" placeholder="10">
     ${vend?`<label>Forma de pagamento</label>
-      <select id="mv-canal" onchange="document.getElementById('mv-preco').value=precoCanal('${id}',this.value)"><option>iFood</option><option>Cartão</option><option>Pix / Dinheiro</option></select>
+      <select id="mv-canal" onchange="document.getElementById('mv-preco').value=precoCanal('${id}',this.value)"><option value="iFood">${canalLabel("iFood")}</option><option>Cartão</option><option>Pix / Dinheiro</option></select>
       <label>Preço de venda por unidade (R$)</label>
       <input id="mv-preco" type="number" inputmode="decimal" value="${p.precos?(p.precos['iFood']||''):''}" placeholder="0,00">`:""}
     <div class="row-acts" style="margin-top:16px">
@@ -856,7 +857,7 @@ function openHist(id){
   const movs=(p.movs||[]).slice().sort((a,b)=>b.t-a.t);
   const list=movs.length?movs.map(m=>{
     const d=new Date(m.t).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-    const desc=m.tipo==="fez"?`Fiz ${fmt(m.qtd)}`:`Vendi ${fmt(m.qtd)}${m.canal?` · ${m.canal}`:""}${m.preco?` · ${brl(m.preco)}`:""}`;
+    const desc=m.tipo==="fez"?`Fiz ${fmt(m.qtd)}`:`Vendi ${fmt(m.qtd)}${m.canal?` · ${canalLabel(m.canal)}`:""}${m.preco?` · ${brl(m.preco)}`:""}`;
     return `<div class="mov"><div class="mov-info"><div>${desc}</div><div class="mov-date">${d}${m.ym!==ymNow()?" · mês anterior":""}</div></div>
       <button class="x" onclick="delMov('${id}',${m.t})">×</button></div>`;}).join(""):'<p class="hint">Nenhum movimento ainda.</p>';
   openSheet(`<h3>Ajustar — ${esc(p.nome)}</h3>
