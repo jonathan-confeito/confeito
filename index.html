@@ -635,15 +635,41 @@ function alertaPrecoCanal(preco,luc,mg){
   if(luc>0&&mg<.1)return{texto:"Margem baixa. Confira se esse preço compensa.",cor:"#9A6E00"};
   return null;
 }
+function canalFraseOrcamento(canalNome){
+  const canal=canalLabel(canalNome);
+  if(canal==="Delivery")return"pelo Delivery";
+  if(canal==="Pix")return"no Pix";
+  if(canal==="Cartão")return"no Cartão";
+  if(canal==="Dinheiro")return"em Dinheiro";
+  if(canal.indexOf("Pix")===0&&canal.indexOf("Dinheiro")>=0)return"no Pix ou em Dinheiro";
+  return `pelo ${canal}`;
+}
+function orcamentoTexto(p,canalNome){
+  const preco=p.precos?num(p.precos[canalNome]):0;
+  if(preco<=0)return"";
+  const nome=(p.nome||"produto").trim()||"produto",canal=canalFraseOrcamento(canalNome);
+  return `Olá! 😊 O valor de ${nome} fica em ${brl(preco)} ${canal}.\nPosso confirmar disponibilidade e prazo de entrega para você.`;
+}
+async function copiarOrcamento(id,key){
+  const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);
+  if(!p||!c)return;
+  const texto=orcamentoTexto(p,c.nome);
+  if(!texto){toast("Defina um preço antes de copiar o orçamento.");return;}
+  try{
+    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(texto);toast("Orçamento copiado!");}
+    else{prompt("Copie seu orçamento:",texto);toast("Orçamento pronto para copiar");}
+  }catch(e){prompt("Copie seu orçamento:",texto);toast("Orçamento pronto para copiar");}
+}
 function updPreco(id,key){
   const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);
   const box=document.getElementById("res-"+id+"-"+key);if(!box)return;
   const ct=custoTotal(p),preco=p.precos?num(p.precos[c.nome]):0;
-  if(preco<=0){const alerta=alertaPrecoCanal(preco,0,0);box.innerHTML=`<span style="color:${alerta.cor}">${alerta.texto}</span>`;return;}
+  const orcBtn=`<button class="btn ghost sm" style="margin-left:auto;min-height:32px;padding:6px 9px" onclick="copiarOrcamento('${id}','${key}')">Orçamento</button>`;
+  if(preco<=0){const alerta=alertaPrecoCanal(preco,0,0);box.innerHTML=`<span style="color:${alerta.cor}">${alerta.texto}</span>${orcBtn}`;return;}
   const frac=c.frac(),fee=preco*frac,imp=preco*C().aliquota/100,rec=preco-fee,luc=rec-ct-imp,mg=luc/preco;
   let cls="b-low";if(mg>=C().margem/100*0.8)cls="b-ok";else if(luc>0)cls="b-mid";
   const alerta=alertaPrecoCanal(preco,luc,mg);
-  box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>${alerta?`<span style="width:100%;color:${alerta.cor}">${alerta.texto}</span>`:""}`;
+  box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>${orcBtn}${alerta?`<span style="width:100%;color:${alerta.cor}">${alerta.texto}</span>`:""}`;
 }
 
 /* ---------- AJUSTES ---------- */
