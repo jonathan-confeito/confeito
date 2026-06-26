@@ -214,6 +214,20 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
 .loja-actions{display:flex;gap:8px;margin-top:15px;align-items:center}
 .loja-actions .btn{flex:1}
 .loja-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:9px}
+.loja-form{display:grid;gap:10px}
+.loja-field label{display:block;margin:0 0 6px;font-size:12px;font-weight:900;color:var(--cocoa-soft)}
+.loja-input{width:100%;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px;color:var(--cocoa);font:inherit;font-weight:700}
+textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
+.loja-link-row{display:flex;gap:8px;align-items:stretch}
+.loja-link-row .loja-link{flex:1;margin-top:0}
+.loja-link-row .btn{flex-shrink:0}
+.loja-media-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.loja-media{border:1.5px dashed #DEC6B5;background:#FAF3EC;border-radius:14px;padding:14px;min-height:116px;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.loja-media .name{font-size:14px}
+.loja-media .meta{font-size:12px}
+.loja-steps{display:grid;gap:8px;margin:10px 0 0}
+.loja-step{display:flex;gap:10px;align-items:center;background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;font-weight:800;color:var(--cocoa-soft)}
+.loja-step b{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;color:var(--rasp);flex-shrink:0}
 .loja-preview{overflow:hidden;padding:0}
 .loja-public-top{background:linear-gradient(135deg,#5A3825,#9D6A48);color:#fff;padding:11px 14px;font-size:13px;font-weight:900}
 .loja-cover{height:86px;background:radial-gradient(circle at 18% 24%,#FFE0ED 0 18%,transparent 19%),
@@ -222,6 +236,7 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
   border:4px solid #fff;display:flex;align-items:center;justify-content:center;font-size:25px;box-shadow:var(--shadow)}
 .loja-public-body{padding:33px 15px 15px}
 .loja-status{display:inline-flex;align-items:center;gap:6px;background:#E3F3EA;color:var(--pist);border-radius:999px;padding:5px 9px;font-size:11.5px;font-weight:900;margin:8px 0 12px}
+.loja-status.fechada{background:#FBEAE8;color:var(--red)}
 .loja-link{background:#FAF3EC;border:1px dashed #DEC6B5;color:var(--cocoa-soft);border-radius:11px;padding:9px 10px;font-size:12px;font-weight:800;margin-top:11px;word-break:break-word}
 .loja-benefits{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:11px}
 .loja-benefit{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;box-shadow:var(--shadow)}
@@ -230,7 +245,7 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
 .loja-check{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .loja-check div{background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12.5px;font-weight:800;color:var(--cocoa-soft)}
 .loja-safe{background:#F5EFE8;border-color:#E8D6C7}
-@media (max-width:380px){.loja-actions{flex-direction:column}.loja-actions .btn{width:100%}.loja-check{grid-template-columns:1fr}}
+@media (max-width:420px){.loja-actions,.loja-link-row{flex-direction:column}.loja-actions .btn,.loja-link-row .btn{width:100%}.loja-check,.loja-media-grid{grid-template-columns:1fr}}
 /* menu */
 .menu-intro{font-size:13px;color:var(--muted);line-height:1.45;margin:-4px 0 13px}
 .menu-card{display:flex;align-items:center;gap:12px}
@@ -744,6 +759,31 @@ function updPreco(id,key){
 }
 
 /* ---------- LOJA ---------- */
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Bolos, doces e encomendas artesanais.",status:"Aberta para pedidos"};
+function lojaSlug(nome){
+  const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+  return slug||"loja-confeito";
+}
+function lojaLink(){return "useconfeito.com/loja/"+lojaSlug(lojaDraft.nome);}
+function lojaSet(k,val){lojaDraft[k]=val;const link=document.getElementById("loja-link-modelo");if(link)link.textContent=lojaLink();renderLojaPreview();}
+async function copiarModeloLinkLoja(){
+  try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(lojaLink());}catch(e){}
+  toast("Este link é apenas uma prévia. A loja pública ainda não está ativa.");
+}
+function renderLojaPreview(){
+  const el=document.getElementById("loja-preview-box");if(!el)return;
+  const nome=lojaDraft.nome||"Doce Encanto",desc=lojaDraft.desc||"Bolos, doces e encomendas artesanais.";
+  const status=lojaDraft.status||"Aberta para pedidos",fechada=status==="Fechada no momento";
+  el.innerHTML=`<div class="loja-public-top">Confeitô</div>
+    <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
+    <div class="loja-public-body">
+      <div class="name">${esc(nome)}</div>
+      <div class="meta">${esc(desc)}</div>
+      <div class="loja-status ${fechada?"fechada":""}">● ${esc(status)}</div>
+      <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
+      <div class="loja-link">${esc(lojaLink())}</div>
+    </div>`;
+}
 function render_loja(){
   const el=document.getElementById("sc-loja");
   el.innerHTML=`<div class="loja-hero">
@@ -751,45 +791,61 @@ function render_loja(){
       <div>
         <div class="loja-eyebrow">Prévia · Em planejamento</div>
         <h2>Loja</h2>
-        <p>Monte sua loja online e receba pedidos pelo WhatsApp.</p>
+        <p>Configure a prévia da sua loja online. Nada será publicado agora.</p>
       </div>
       <span class="loja-badge">Prévia</span>
     </div>
     <div class="loja-actions">
-      <button class="btn primary" onclick="toast('Em breve: sua loja online no Confeitô.')">Criar minha loja</button>
-      <button class="btn ghost" onclick="setTab('ajustes')">Ajustes</button>
+      <button class="btn primary" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia</button>
+      <button class="btn ghost" onclick="setTab('menu')">Menu</button>
     </div>
-    <div class="loja-note">Loja pública ainda não está ativa. Nenhum dado será publicado agora.</div>
-  </div>
-
-  <div class="card loja-preview">
-    <div class="loja-public-top">Confeitô</div>
-    <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
-    <div class="loja-public-body">
-      <div class="name">Doce Encanto</div>
-      <div class="meta">Bolos, doces e encomendas artesanais.</div>
-      <div class="loja-status">● Aberta para pedidos</div>
-      <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
-      <div class="loja-link">useconfeito.com/loja/doce-encanto</div>
-    </div>
-  </div>
-
-  <div class="loja-benefits">
-    <div class="loja-benefit"><b>Venda com um link profissional</b><span>Compartilhe sua loja com clientes e receba pedidos organizados.</span></div>
-    <div class="loja-benefit"><b>Use seus produtos já cadastrados</b><span>Escolha quais receitas/produtos aparecem na vitrine.</span></div>
-    <div class="loja-benefit"><b>Pedido pronto no WhatsApp</b><span>O cliente monta o carrinho e envia tudo direto para você.</span></div>
+    <div class="loja-note">Esta área ainda não publica sua loja nem salva dados.</div>
   </div>
 
   <div class="card">
-    <div class="sug-lab" style="margin-top:0;margin-bottom:8px">O que sua loja terá</div>
-    <div class="loja-check">
-      <div>Logo e capa da sua marca</div>
-      <div>Produtos com foto, descrição e preço</div>
-      <div>Categorias</div>
-      <div>Carrinho simples</div>
-      <div>Retirada ou entrega</div>
-      <div>Pedido enviado pelo WhatsApp</div>
+    <div class="sug-lab" style="margin-top:0;margin-bottom:10px">Dados da loja</div>
+    <div class="loja-form">
+      <div class="loja-field"><label>Nome da loja</label><input class="loja-input" value="${esc(lojaDraft.nome)}" oninput="lojaSet('nome',this.value)" placeholder="Doce Encanto"></div>
+      <div class="loja-field"><label>WhatsApp para pedidos</label><input class="loja-input" inputmode="tel" value="${esc(lojaDraft.whats)}" oninput="lojaSet('whats',this.value)" placeholder="(21) 99999-9999"></div>
+      <div class="loja-field"><label>Descrição curta</label><textarea class="loja-input" oninput="lojaSet('desc',this.value)" placeholder="Bolos, doces e encomendas artesanais.">${esc(lojaDraft.desc)}</textarea></div>
+      <div class="loja-field"><label>Status da loja</label><select class="loja-input" onchange="lojaSet('status',this.value)">
+        <option ${lojaDraft.status==="Aberta para pedidos"?"selected":""}>Aberta para pedidos</option>
+        <option ${lojaDraft.status==="Fechada no momento"?"selected":""}>Fechada no momento</option>
+      </select></div>
+      <div class="loja-field"><label>Link da loja</label><div class="loja-link-row"><div class="loja-link" id="loja-link-modelo">${esc(lojaLink())}</div><button class="btn ghost sm" onclick="copiarModeloLinkLoja()">Copiar modelo de link</button></div></div>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="sug-lab" style="margin-top:0;margin-bottom:10px">Imagem da loja</div>
+    <div class="loja-media-grid">
+      <div class="loja-media"><div><div class="name">Capa da loja</div><div class="meta">Imagem larga para o topo da vitrine.</div></div><button class="btn ghost sm" onclick="toast('Upload de imagens em breve.')">Adicionar capa</button></div>
+      <div class="loja-media"><div><div class="name">Logo da loja</div><div class="meta">Marca circular para identificar sua loja.</div></div><button class="btn ghost sm" onclick="toast('Upload de imagens em breve.')">Adicionar logo</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sug-lab" style="margin-top:0;margin-bottom:8px">Como os clientes vão comprar</div>
+    <div class="loja-steps">
+      <div class="loja-step"><b>1</b><span>Cliente acessa seu link</span></div>
+      <div class="loja-step"><b>2</b><span>Escolhe os produtos</span></div>
+      <div class="loja-step"><b>3</b><span>Monta o carrinho</span></div>
+      <div class="loja-step"><b>4</b><span>Envia o pedido no WhatsApp</span></div>
+    </div>
+    <p class="hint">Na versão real, o cliente verá apenas produtos públicos. Custos, lucro e informações internas ficarão protegidos.</p>
+  </div>
+
+  <div class="card loja-preview" id="loja-preview-box"></div>
+
+  <div class="card">
+    <div class="name">Produtos da loja</div>
+    <p class="hint">Em breve, você poderá escolher quais produtos aparecem na sua vitrine.</p>
+    <div class="loja-check">
+      <div>Bolo de Cenoura</div>
+      <div>Brigadeiro Gourmet</div>
+      <div>Brownie</div>
+    </div>
+    <div class="loja-actions"><button class="btn ghost" onclick="toast('Seleção de produtos em breve.')">Escolher produtos</button></div>
   </div>
 
   <div class="card loja-safe">
@@ -798,14 +854,11 @@ function render_loja(){
   </div>
 
   <div class="card">
-    <div class="name">Indique e ganhe</div>
-    <p class="hint">Em breve, cada confeiteira terá um link para indicar o Confeitô e ganhar benefícios.</p>
-  </div>
-
-  <div class="card">
     <div class="name">Plano futuro</div>
-    <p class="hint">Com a Loja Confeitô: 3 meses grátis. Depois, R$29,90/mês. Sem cobrança ativa agora.</p>
+    <p class="hint">3 meses grátis. Depois, R$29,90/mês. Cobrança ainda não está ativa.</p>
+    <div class="loja-actions"><button class="btn ghost" onclick="setTab('menu')">Ver no Menu</button></div>
   </div>`;
+  renderLojaPreview();
 }
 
 /* ---------- MENU ---------- */
