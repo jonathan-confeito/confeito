@@ -261,15 +261,19 @@ Riscos:
 
 ### Recomendacao V1
 
-Para a primeira versao real, a recomendacao mais segura e `loja.useconfeito.com/[slug]`.
+Para a primeira versao real, a decisao de produto e usar `useconfeito.com/loja/[slug]`.
 
-Motivo: a Loja sera publica, enquanto o app atual e privado e roda em `/app/` com noindex. Separar a loja em subdominio reduz risco de confundir regras de indexacao, headers, dados privados e rotas. Depois, se fizer sentido para SEO, `useconfeito.com/loja/[slug]` pode virar alias ou rota publica planejada.
+Motivo: o link fica mais claro para cliente final, reforca o dominio principal da marca Confeito e combina melhor com uma vitrine publica elegante.
+
+O app privado continua em `/app/` e deve permanecer separado da loja publica. A rota `/loja/[slug]` nao significa expor o app privado nem ler o payload completo de `public.dados`. A implementacao futura deve servir somente uma projecao publica e sanitizada dos dados da loja, separada de custos, lucro, insumos, movimentos e configuracoes internas.
+
+Se a arquitetura exigir isolamento adicional, `loja.useconfeito.com/[slug]` pode continuar como alternativa tecnica futura. Para a V1 planejada, a referencia de produto e `useconfeito.com/loja/[slug]`.
 
 ### Politica de indexacao da loja V1
 
 O app privado em `/app/` deve continuar `noindex`.
 
-A loja publica e diferente do app privado. Ainda assim, na V1, antes de qualidade, legal, seguranca e performance estarem maduros, a recomendacao e considerar iniciar as lojas publicas com `noindex`.
+A loja publica e diferente do app privado. Ainda assim, na V1, antes de qualidade, legal, seguranca e performance estarem maduros, a recomendacao e considerar iniciar as lojas publicas em `/loja/[slug]` com `noindex`.
 
 Depois de validar fluxo, conteudo, privacidade e performance, a indexacao das lojas pode ser liberada se isso for estrategico. Essa abordagem evita que paginas publicas incompletas sejam indexadas cedo demais.
 
