@@ -231,6 +231,17 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
 .loja-check div{background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12.5px;font-weight:800;color:var(--cocoa-soft)}
 .loja-safe{background:#F5EFE8;border-color:#E8D6C7}
 @media (max-width:380px){.loja-actions{flex-direction:column}.loja-actions .btn{width:100%}.loja-check{grid-template-columns:1fr}}
+/* menu */
+.menu-intro{font-size:13px;color:var(--muted);line-height:1.45;margin:-4px 0 13px}
+.menu-card{display:flex;align-items:center;gap:12px}
+.menu-ic{width:40px;height:40px;border-radius:13px;background:#FAF3EC;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.menu-copy{flex:1;min-width:0}
+.menu-copy .name{font-size:15.5px}
+.menu-card .btn{flex-shrink:0;min-height:36px;padding:8px 10px}
+.menu-card.danger .menu-ic{background:#FBEAE8;color:var(--red)}
+.menu-price{font-size:13px;font-weight:800;color:var(--cocoa);margin-top:6px}
+.menu-soon{display:inline-block;margin-top:7px;background:#F3E9DF;color:var(--cocoa-soft);padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900}
+@media (max-width:390px){.menu-card{align-items:flex-start}.menu-card .btn{margin-top:2px}}
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--cocoa);color:#fff;
   padding:11px 18px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:80;opacity:0;pointer-events:none;
   transition:opacity .2s, transform .2s;max-width:90%}
@@ -264,7 +275,7 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
   <header>
     <span class="mark">Confei<b>tô</b></span>
     <span class="sub" id="subhead">preço certo, lucro certo</span>
-    <button class="head-menu" type="button" onclick="setTab('ajustes')" aria-label="Abrir ajustes">Menu</button>
+    <button class="head-menu" type="button" onclick="setTab('menu')" aria-label="Abrir menu">Menu</button>
   </header>
   <main>
     <section class="screen on" id="sc-insumos"></section>
@@ -272,6 +283,7 @@ body:not(.logged) .app,body:not(.logged) nav,body:not(.logged) .fab{display:none
     <section class="screen" id="sc-precos"></section>
     <section class="screen" id="sc-estoque"></section>
     <section class="screen" id="sc-loja"></section>
+    <section class="screen" id="sc-menu"></section>
     <section class="screen" id="sc-ajustes"></section>
   </main>
 </div>
@@ -447,7 +459,7 @@ function margemReal(p){const mp=num(p.meuPreco);const l=lucroIfood(p);return(mp>
 
 /* ---------- navegação ---------- */
 let tab="insumos";
-const screens={insumos:render_insumos,receitas:render_receitas,precos:render_precos,estoque:render_estoque,loja:render_loja,ajustes:render_ajustes};
+const screens={insumos:render_insumos,receitas:render_receitas,precos:render_precos,estoque:render_estoque,loja:render_loja,menu:render_menu,ajustes:render_ajustes};
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function setTab(t){
   tab=t;
@@ -792,7 +804,51 @@ function render_loja(){
 
   <div class="card">
     <div class="name">Plano futuro</div>
-    <p class="hint">Com a Loja Confeitô, o plano poderá ser R$19,90/mês após o período grátis. Sem cobrança ativa agora.</p>
+    <p class="hint">Com a Loja Confeitô: 3 meses grátis. Depois, R$29,90/mês. Sem cobrança ativa agora.</p>
+  </div>`;
+}
+
+/* ---------- MENU ---------- */
+function render_menu(){
+  const el=document.getElementById("sc-menu");
+  const email=sess&&sess.user&&sess.user.email?esc(sess.user.email):"Conta conectada";
+  el.innerHTML=`<h2 class="title">Menu</h2>
+  <p class="menu-intro">Central para acessar ajustes, conta e recursos que ainda estão em planejamento.</p>
+
+  <div class="card menu-card">
+    <div class="menu-ic">⚙️</div>
+    <div class="menu-copy"><div class="name">Ajustes</div><div class="meta">Taxas, margem, impostos e preferências do app.</div></div>
+    <button class="btn ghost sm" onclick="setTab('ajustes')">Abrir</button>
+  </div>
+
+  <div class="card menu-card">
+    <div class="menu-ic">👤</div>
+    <div class="menu-copy"><div class="name">Conta</div><div class="meta">Veja seus dados de acesso e informações da conta.</div><div class="menu-price">${email}</div></div>
+    <button class="btn ghost sm" onclick="toast('Conta em breve no Confeitô.')">Ver</button>
+  </div>
+
+  <div class="card menu-card">
+    <div class="menu-ic">💎</div>
+    <div class="menu-copy"><div class="name">Assinatura</div><div class="meta">3 meses grátis. Depois, R$29,90/mês.</div><div class="menu-price">Cobrança ainda não está ativa.</div><span class="menu-soon">Em breve</span></div>
+    <button class="btn ghost sm" onclick="toast('Assinatura em breve no Confeitô.')">Ver plano</button>
+  </div>
+
+  <div class="card menu-card">
+    <div class="menu-ic">🎁</div>
+    <div class="menu-copy"><div class="name">Indique e ganhe</div><div class="meta">Em breve, indique outras confeiteiras e ganhe benefícios.</div><span class="menu-soon">Em breve</span></div>
+    <button class="btn ghost sm" onclick="toast('Indicações em breve.')">Ver indicação</button>
+  </div>
+
+  <div class="card menu-card">
+    <div class="menu-ic">❔</div>
+    <div class="menu-copy"><div class="name">Ajuda</div><div class="meta">Dúvidas, suporte e orientações para usar o Confeitô.</div></div>
+    <button class="btn ghost sm" onclick="toast('Ajuda em breve.')">Abrir</button>
+  </div>
+
+  <div class="card menu-card danger">
+    <div class="menu-ic">⏻</div>
+    <div class="menu-copy"><div class="name">Sair</div><div class="meta">Encerre a sessão neste aparelho.</div></div>
+    <button class="btn danger sm" onclick="doLogout()">Sair</button>
   </div>`;
 }
 
