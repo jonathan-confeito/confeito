@@ -162,6 +162,9 @@ input:focus,select:focus{outline:none;border-color:var(--rasp)}
 .cpx-in{flex:0 0 112px;text-align:right;font-size:16px;font-weight:700;padding:9px 10px}
 .cpx-res{font-size:12.5px;color:var(--cocoa-soft);margin-top:8px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .cpx-res .badge{margin-left:auto}
+.price-search{margin:8px 0 12px}
+.price-toggle{width:100%;background:transparent;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0;min-height:34px;border-radius:0}
+.price-toggle .toggle-hint{font-size:10px;letter-spacing:0;text-transform:none;color:var(--muted);white-space:nowrap}
 .mh{padding:13px 0;border-top:1px solid var(--line)}
 .mh-mes{font-weight:800;color:var(--cocoa);font-size:15px;text-transform:capitalize}
 .mh-stat{font-size:12.5px;color:var(--muted);margin-top:3px}
@@ -597,28 +600,44 @@ function delProduto(id){if(!confirm("Excluir esta receita?"))return;
   state.produtos=state.produtos.filter(p=>p.id!==id);save();render_receitas();toast("Receita excluída");}
 
 /* ---------- PREÇOS ---------- */
+let precosBusca="",precosAbertos={};
 function render_precos(){
   const el=document.getElementById("sc-precos");
   if(!state.produtos.length){el.innerHTML=empty("🏷️","Sem produtos para precificar","Crie suas receitas na aba Receitas e o preço aparece aqui.");return;}
-  let h='<h2 class="title">Preços · quanto sobra em cada canal</h2>';
+  let h=`<h2 class="title">Preços · quanto sobra em cada canal</h2>
+    <input class="price-search" type="search" value="${esc(precosBusca)}" placeholder="Buscar por nome do produto..." oninput="precosBusca=this.value;aplicarBuscaPrecos()">`;
   state.produtos.forEach(p=>{
     const ct=custoTotal(p),ci=custoInsumoUn(p),mo=maoObra(p),cf=custoFixoUn();
-    h+=`<div class="card">
+    const aberto=!!precosAbertos[p.id];
+    h+=`<div class="card price-card" data-nome="${esc((p.nome||"").toLowerCase())}">
       <div class="price-head"><div style="display:flex;gap:10px;align-items:center;min-width:0">${p.foto?`<img class="thumb-sm" src="${p.foto}" alt="">`:""}<div class="name">${esc(p.nome)}</div></div>
       <div style="text-align:right"><div class="meta">custo/un</div><div class="big" style="color:var(--cocoa-soft)">${brl(ct)}</div></div></div>
       <div class="cost-break">insumos ${brl(ci)}${mo>0?` · trabalho ${brl(mo)}`:""}${cf>0?` · fixo ${brl(cf)}`:""}</div>
-      <div class="sug-lab">Meu preço de venda por canal</div>`;
-    CANAIS.forEach(c=>{
-      const pr=p.precos&&p.precos[c.nome]?p.precos[c.nome]:"";
-      h+=`<div class="cpx"><div class="cpx-top">
-        <div style="flex:1;min-width:0"><span class="chan-name">${canalLabel(c.nome)}</span><div class="chan-fee">taxa ${fmt(c.frac()*100)}%</div></div>
-        <input class="cpx-in" type="number" inputmode="decimal" value="${pr}" placeholder="0,00" oninput="setPreco('${p.id}','${c.key}',this.value)"></div>
-        <div class="cpx-res" id="res-${p.id}-${c.key}"></div></div>`;
-    });
+      <button class="sug-lab price-toggle" type="button" onclick="togglePrecosCanais('${p.id}')">
+        <span>Meu preço de venda por canal</span><span class="toggle-hint">${aberto?"tocar para recolher ▴":"tocar para abrir ▾"}</span>
+      </button>`;
+    if(aberto)CANAIS.forEach(c=>{
+        const pr=p.precos&&p.precos[c.nome]?p.precos[c.nome]:"";
+        h+=`<div class="cpx"><div class="cpx-top">
+          <div style="flex:1;min-width:0"><span class="chan-name">${canalLabel(c.nome)}</span><div class="chan-fee">taxa ${fmt(c.frac()*100)}%</div></div>
+          <input class="cpx-in" type="number" inputmode="decimal" value="${pr}" placeholder="0,00" oninput="setPreco('${p.id}','${c.key}',this.value)"></div>
+          <div class="cpx-res" id="res-${p.id}-${c.key}"></div></div>`;
+      });
     h+=`</div>`;
   });
+  h+=`<div id="precos-empty-search" class="card" style="display:none"><p class="hint" style="margin:0">Nenhum produto encontrado.</p></div>`;
   el.innerHTML=h;
-  state.produtos.forEach(p=>CANAIS.forEach(c=>updPreco(p.id,c.key)));
+  aplicarBuscaPrecos();
+  state.produtos.forEach(p=>{if(precosAbertos[p.id])CANAIS.forEach(c=>updPreco(p.id,c.key));});
+}
+function togglePrecosCanais(id){precosAbertos[id]=!precosAbertos[id];render_precos();}
+function aplicarBuscaPrecos(){
+  const termo=precosBusca.trim().toLowerCase();let total=0;
+  document.querySelectorAll("#sc-precos .price-card").forEach(card=>{
+    const show=!termo||(card.dataset.nome||"").includes(termo);
+    card.style.display=show?"":"none";if(show)total++;
+  });
+  const empty=document.getElementById("precos-empty-search");if(empty)empty.style.display=total?"none":"block";
 }
 const CANAIS=[
   {key:"ifood",nome:"iFood",frac:()=>ifoodPct()},
@@ -640,42 +659,44 @@ function linhaPrecoSugerido(p,canal){
   const sug=precoSugeridoCanal(p,canal);
   return sug!==null?`<span style="width:100%;color:var(--muted)">Sugestão: <b>${brl(sug)}</b></span>`:"";
 }
-function canalFraseOrcamento(canalNome){
+function canalFraseMensagem(canalNome){
   const canal=canalLabel(canalNome);
-  if(canal==="Delivery")return"pelo Delivery";
+  if(canal==="Delivery")return"";
   if(canal==="Pix")return"no Pix";
   if(canal==="Cartão")return"no Cartão";
   if(canal==="Dinheiro")return"em Dinheiro";
   if(canal.indexOf("Pix")===0&&canal.indexOf("Dinheiro")>=0)return"no Pix ou em Dinheiro";
-  return `pelo ${canal}`;
+  return `no ${canal}`;
 }
-function orcamentoTexto(p,canalNome){
+function mensagemPrecoTexto(p,canalNome){
   const preco=p.precos?num(p.precos[canalNome]):0;
   if(preco<=0)return"";
-  const nome=(p.nome||"produto").trim()||"produto",canal=canalFraseOrcamento(canalNome);
-  return `Olá! 😊 O valor de ${nome} fica em ${brl(preco)} ${canal}.\nPosso confirmar disponibilidade e prazo de entrega para você.`;
+  const nome=(p.nome||"produto").trim()||"produto",canal=canalFraseMensagem(canalNome);
+  if(!canal)return"";
+  return `Olá! 😊 ${nome} sai por ${brl(preco)} ${canal}.\nPosso separar para você e combinar retirada ou entrega.`;
 }
-async function copiarOrcamento(id,key){
+async function copiarMensagemPreco(id,key){
   const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);
   if(!p||!c)return;
-  const texto=orcamentoTexto(p,c.nome);
-  if(!texto){toast("Defina um preço antes de copiar o orçamento.");return;}
+  if(c.nome==="iFood"){toast("Mensagem disponível para venda direta.");return;}
+  const texto=mensagemPrecoTexto(p,c.nome);
+  if(!texto){toast("Defina um preço antes de copiar a mensagem.");return;}
   try{
-    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(texto);toast("Orçamento copiado!");}
-    else{prompt("Copie seu orçamento:",texto);toast("Orçamento pronto para copiar");}
-  }catch(e){prompt("Copie seu orçamento:",texto);toast("Orçamento pronto para copiar");}
+    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(texto);toast("Mensagem copiada!");}
+    else{prompt("Copie sua mensagem:",texto);toast("Mensagem pronta para copiar");}
+  }catch(e){prompt("Copie sua mensagem:",texto);toast("Mensagem pronta para copiar");}
 }
 function updPreco(id,key){
   const p=state.produtos.find(p=>p.id===id),c=canalByKey(key);
   const box=document.getElementById("res-"+id+"-"+key);if(!box)return;
   const ct=custoTotal(p),preco=p.precos?num(p.precos[c.nome]):0;
   const sugLine=linhaPrecoSugerido(p,c);
-  const orcBtn=`<button class="btn ghost sm" style="margin-left:auto;min-height:32px;padding:6px 9px" onclick="copiarOrcamento('${id}','${key}')">Orçamento</button>`;
-  if(preco<=0){const alerta=alertaPrecoCanal(preco,0,0);box.innerHTML=`${sugLine}<span style="color:${alerta.cor}">${alerta.texto}</span>${orcBtn}`;return;}
+  const msgBtn=c.nome==="iFood"?"":`<button class="btn ghost sm" style="margin-left:auto;min-height:32px;padding:6px 9px" onclick="copiarMensagemPreco('${id}','${key}')">Mensagem</button>`;
+  if(preco<=0){const alerta=alertaPrecoCanal(preco,0,0);box.innerHTML=`${sugLine}<span style="color:${alerta.cor}">${alerta.texto}</span>${msgBtn}`;return;}
   const frac=c.frac(),fee=preco*frac,imp=preco*C().aliquota/100,rec=preco-fee,luc=rec-ct-imp,mg=luc/preco;
   let cls="b-low";if(mg>=C().margem/100*0.8)cls="b-ok";else if(luc>0)cls="b-mid";
   const alerta=alertaPrecoCanal(preco,luc,mg);
-  box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>${sugLine}${orcBtn}${alerta?`<span style="width:100%;color:${alerta.cor}">${alerta.texto}</span>`:""}`;
+  box.innerHTML=`recebe <b>${brl(rec)}</b> · lucro <b style="color:${luc>0?'var(--pist)':'var(--red)'}">${brl(luc)}</b><span class="badge ${cls}">${(mg*100).toFixed(0)}%</span>${sugLine}${msgBtn}${alerta?`<span style="width:100%;color:${alerta.cor}">${alerta.texto}</span>`:""}`;
 }
 
 /* ---------- AJUSTES ---------- */
@@ -947,7 +968,7 @@ function empty(ic,h,p){return `<div class="empty"><div class="e-ic">${ic}</div><
   ${(tab==="insumos"||tab==="receitas")?`<button class="btn primary" onclick="${tab==="insumos"?"formInsumo()":"formProduto()"}">+ ${tab==="insumos"?"Cadastrar insumo":"Criar receita"}</button>`:""}</div>`;}
 function v(id){return document.getElementById(id).value;}
 function fmt(n){return new Intl.NumberFormat("pt-BR",{maximumFractionDigits:2}).format(n);}
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 
 /* ---------- start ---------- */
 sess=loadSess();
