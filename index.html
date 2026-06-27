@@ -257,8 +257,18 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-product-card.on .loja-product-status{color:var(--pist)}
 .loja-preview-products{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
 .loja-mini-products{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
-.loja-mini-product{background:#FAF3EC;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:11.5px;font-weight:900;color:var(--cocoa-soft)}
+.loja-mini-product{background:#FAF3EC;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:11.5px;font-weight:900;color:var(--cocoa-soft);display:inline-flex;align-items:center;gap:7px}
+.loja-mini-product .btn{min-height:27px;padding:5px 8px;font-size:11px}
 .loja-empty-products{color:var(--muted);font-size:12px;line-height:1.35;margin-top:7px}
+.loja-cart{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.loja-cart-list{display:grid;gap:8px;margin-top:8px}
+.loja-cart-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px}
+.loja-cart-info b{display:block;color:var(--cocoa);font-size:13px}
+.loja-cart-info span{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.loja-cart-qtd{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.loja-cart-qtd strong{min-width:24px;text-align:center;color:var(--cocoa)}
+.loja-cart-total{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:9px;font-weight:900;color:var(--cocoa)}
+.loja-cart-note{font-size:11.5px;color:var(--muted);line-height:1.35;margin-top:8px}
 .loja-category-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .loja-cat-chip{border:1.5px solid var(--line);background:#fff;color:var(--cocoa-soft);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:900}
 .loja-cat-chip.on{background:var(--cocoa);border-color:var(--cocoa);color:#fff}
@@ -267,7 +277,7 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-cat-row{display:inline-flex;align-items:center;gap:6px}
 .loja-cat-remove{border:0;background:rgba(90,56,37,.1);color:inherit;border-radius:999px;padding:2px 6px;font-size:10px;font-weight:900}
 .loja-category-note{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
-@media (max-width:420px){.loja-actions,.loja-link-row{flex-direction:column}.loja-actions .btn,.loja-link-row .btn{width:100%}.loja-check,.loja-media-grid{grid-template-columns:1fr}}
+@media (max-width:420px){.loja-actions,.loja-link-row{flex-direction:column}.loja-actions .btn,.loja-link-row .btn{width:100%}.loja-check,.loja-media-grid{grid-template-columns:1fr}.loja-cart-item{grid-template-columns:1fr}.loja-cart-qtd{justify-content:flex-start}}
 /* menu */
 .menu-intro{font-size:13px;color:var(--muted);line-height:1.45;margin:-4px 0 13px}
 .menu-card{display:flex;align-items:center;gap:12px}
@@ -783,7 +793,7 @@ function updPreco(id,key){
 /* ---------- LOJA ---------- */
 const LOJA_CATEGORIAS_SUGERIDAS=["Pronta entrega","Encomendas","Personalizados","Kits","Sobremesas","Especiais"];
 const LOJA_CATEGORIAS_MAX=6;
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{}};
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},carrinho:{}};
 function lojaSlug(nome){
   const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
   return slug||"loja-confeito";
@@ -805,6 +815,47 @@ function lojaProdutosPorCategoria(produtos){
 function lojaProdutosSelecionados(){
   const ativos=new Set(lojaDraft.produtosSelecionados);
   return lojaProdutosVisuais().filter(p=>ativos.has(p.key));
+}
+function lojaPrecoVisual(produto,i){const precos=[12,18,25,35];return precos[Math.max(0,i)%precos.length];}
+function lojaCarrinhoItens(){
+  const produtos=lojaProdutosVisuais();
+  return Object.keys(lojaDraft.carrinho||{}).map(key=>{
+    const i=produtos.findIndex(p=>p.key===key);
+    if(i<0)return null;
+    const qtd=Math.max(0,Number(lojaDraft.carrinho[key])||0);
+    if(qtd<=0)return null;
+    const produto=produtos[i],preco=lojaPrecoVisual(produto,i);
+    return{key,produto,qtd,preco,subtotal:qtd*preco};
+  }).filter(Boolean);
+}
+function lojaCarrinhoTotal(){return lojaCarrinhoItens().reduce((s,it)=>s+it.subtotal,0);}
+function lojaCarrinhoAdd(key){
+  if(!lojaProdutosVisuais().some(p=>p.key===key))return;
+  lojaDraft.carrinho=lojaDraft.carrinho||{};
+  lojaDraft.carrinho[key]=(Number(lojaDraft.carrinho[key])||0)+1;
+  renderLojaPreview();
+  toast("Produto adicionado ao carrinho visual. Nada foi enviado.");
+}
+function lojaCarrinhoQtd(key,delta){
+  lojaDraft.carrinho=lojaDraft.carrinho||{};
+  const qtd=(Number(lojaDraft.carrinho[key])||0)+delta;
+  if(qtd<=0)delete lojaDraft.carrinho[key];
+  else lojaDraft.carrinho[key]=qtd;
+  renderLojaPreview();
+  toast("Carrinho visual atualizado. Nada foi enviado.");
+}
+function lojaCarrinhoRemove(key){
+  if(lojaDraft.carrinho)delete lojaDraft.carrinho[key];
+  renderLojaPreview();
+  toast("Item removido do carrinho visual. Nada foi enviado.");
+}
+function renderLojaCarrinho(){
+  const itens=lojaCarrinhoItens();
+  const itensHtml=itens.length?itens.map(it=>`<div class="loja-cart-item">
+    <div class="loja-cart-info"><b>${esc(it.produto.nome)}</b><span>${brl(it.preco)} un. · subtotal ${brl(it.subtotal)}</span></div>
+    <div class="loja-cart-qtd"><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,-1)">−</button><strong>${fmt(it.qtd)}</strong><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,1)">+</button><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoRemove(this.dataset.key)">Remover</button></div>
+  </div>`).join(""):`<div class="loja-empty-products">Adicione produtos para simular um pedido.</div>`;
+  return `<div class="loja-cart"><div class="chan-name">Carrinho da prévia</div><div class="loja-cart-list">${itensHtml}</div><div class="loja-cart-total"><span>Total visual</span><span>${brl(lojaCarrinhoTotal())}</span></div><div class="loja-cart-note">Valores apenas ilustrativos nesta prévia. Carrinho apenas demonstrativo. Nenhum pedido será criado.</div><button class="btn primary" style="width:100%;margin-top:9px" onclick="toast('Pedido visual. O envio pelo WhatsApp ainda não está ativo.')">Simular envio</button></div>`;
 }
 function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
@@ -861,6 +912,7 @@ function lojaToggleProduto(btn){
   const key=btn.dataset.key;
   if(lojaProdutoSelecionado(key)){
     lojaDraft.produtosSelecionados=lojaDraft.produtosSelecionados.filter(k=>k!==key);
+    if(lojaDraft.carrinho)delete lojaDraft.carrinho[key];
     toast("Produto oculto da prévia visual. Nada foi salvo.");
   }else{
     lojaDraft.produtosSelecionados=[...lojaDraft.produtosSelecionados,key];
@@ -871,6 +923,7 @@ function lojaToggleProduto(btn){
 function limparProdutosLoja(){
   lojaDraft.produtosSelecionados=[];
   lojaDraft.produtoCategorias={};
+  lojaDraft.carrinho={};
   renderLojaProdutos();renderLojaPreview();
   toast("Seleção visual limpa. Nada foi salvo.");
 }
@@ -906,7 +959,8 @@ function renderLojaPreview(){
   const status=lojaDraft.status||"Aberta para pedidos",fechada=status==="Fechada no momento";
   const selecionados=lojaProdutosSelecionados(),produtos=lojaProdutosPorCategoria(selecionados);
   const vazio=selecionados.length?"Nenhum produto selecionado nesta categoria.":"Nenhum produto selecionado para a prévia.";
-  const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product">${esc(p.nome)}</span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
+  const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product"><span>${esc(p.nome)}</span><button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaCarrinhoAdd(this.dataset.key)">Adicionar</button></span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
+  const carrinhoHtml=renderLojaCarrinho();
   el.innerHTML=`<div class="loja-public-top">Confeitô</div>
     <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
     <div class="loja-public-body">
@@ -915,7 +969,7 @@ function renderLojaPreview(){
       <div class="loja-status ${fechada?"fechada":""}">● ${esc(status)}</div>
       <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
       <div class="loja-link">${esc(lojaLink())}</div>
-      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div></div>
+      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}</div>
     </div>`;
 }
 function render_loja(){
@@ -964,9 +1018,10 @@ function render_loja(){
       <div class="loja-step"><b>1</b><span>Cliente acessa seu link</span></div>
       <div class="loja-step"><b>2</b><span>Escolhe os produtos</span></div>
       <div class="loja-step"><b>3</b><span>Monta o carrinho</span></div>
-      <div class="loja-step"><b>4</b><span>Envia o pedido no WhatsApp</span></div>
+      <div class="loja-step"><b>4</b><span>Confere nome e WhatsApp</span></div>
+      <div class="loja-step"><b>5</b><span>Envia o pedido para a confeiteira</span></div>
     </div>
-    <p class="hint">Na versão real, o cliente verá apenas produtos públicos. Custos, lucro e informações internas ficarão protegidos.</p>
+    <p class="hint">Nesta prévia, o carrinho é apenas visual. Nenhum pedido será enviado. Na versão real, o cliente verá apenas produtos públicos.</p>
   </div>
 
   <div class="card loja-preview" id="loja-preview-box"></div>
