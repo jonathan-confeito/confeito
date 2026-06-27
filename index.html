@@ -877,7 +877,7 @@ function limparProdutosLoja(){
 }
 function renderLojaProdutos(){
   const el=document.getElementById("loja-produtos-box");if(!el)return;
-  const produtos=lojaProdutosPorCategoria(lojaProdutosVisuais());
+  const produtos=lojaProdutosVisuais();
   el.innerHTML=produtos.map(p=>{
     const on=lojaProdutoSelecionado(p.key);
     return `<div class="loja-product-card ${on?"on":"off"}">
@@ -973,7 +973,7 @@ function render_loja(){
 
   <div class="card">
     <div class="loja-products-head">
-      <div><div class="name">Produtos da loja</div><p class="hint">Escolha visualmente quais produtos apareceriam na sua vitrine. Nada será salvo agora.</p></div>
+      <div><div class="name">Produtos da loja</div><p class="hint">Escolha quais produtos entram na prévia da vitrine. As categorias acima organizam a prévia, mas todos os produtos continuam disponíveis para seleção.</p></div>
       <span class="loja-badge">Seleção visual</span>
     </div>
     <div class="loja-product-list" id="loja-produtos-box"></div>
