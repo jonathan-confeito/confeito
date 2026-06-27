@@ -783,7 +783,7 @@ function updPreco(id,key){
 /* ---------- LOJA ---------- */
 const LOJA_CATEGORIAS_SUGERIDAS=["Pronta entrega","Encomendas","Personalizados","Kits","Sobremesas","Especiais"];
 const LOJA_CATEGORIAS_MAX=6;
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[]};
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{}};
 function lojaSlug(nome){
   const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
   return slug||"loja-confeito";
@@ -793,23 +793,14 @@ function lojaSet(k,val){lojaDraft[k]=val;const link=document.getElementById("loj
 function lojaNormCategoria(cat){return String(cat||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();}
 function lojaCategorias(){return["Todos",...lojaDraft.categoriasAtivas];}
 function lojaCategoriaExiste(cat){const n=lojaNormCategoria(cat);return lojaCategorias().some(c=>lojaNormCategoria(c)===n);}
-function lojaCategoriaPorNome(nome,i){
-  const cats=lojaDraft.categoriasAtivas.length?lojaDraft.categoriasAtivas:["Pronta entrega"];
-  const n=lojaNormCategoria(nome);
-  const busca=cats.find(c=>n.includes(lojaNormCategoria(c)));
-  if(busca)return busca;
-  if(n.includes("kit")||n.includes("combo")||n.includes("caixa")){const c=cats.find(x=>lojaNormCategoria(x).includes("kit"));if(c)return c;}
-  if(n.includes("personal")||n.includes("tema")||n.includes("festa")||n.includes("aniversario")){const c=cats.find(x=>lojaNormCategoria(x).includes("personal")||lojaNormCategoria(x).includes("encomenda"));if(c)return c;}
-  return cats[i%cats.length]||"Pronta entrega";
-}
 function lojaProdutosVisuais(){
-  const reais=(state.produtos||[]).filter(p=>p&&p.nome).slice(0,6).map((p,i)=>({key:"real-"+(p.id||i),nome:p.nome,origem:"Produto cadastrado",categoria:lojaCategoriaPorNome(p.nome,i)}));
+  const reais=(state.produtos||[]).filter(p=>p&&p.nome).slice(0,6).map((p,i)=>{const key="real-"+(p.id||i);return{key,nome:p.nome,origem:"Produto cadastrado",categoria:lojaDraft.produtoCategorias[key]||""};});
   if(reais.length)return reais;
-  return["Produto artesanal","Kit festa","Encomenda personalizada"].map((nome,i)=>({key:"exemplo-"+i,nome,origem:"Exemplo visual",categoria:lojaCategoriaPorNome(nome,i)}));
+  return["Produto artesanal","Kit festa","Encomenda personalizada"].map((nome,i)=>{const key="exemplo-"+i;return{key,nome,origem:"Exemplo visual",categoria:lojaDraft.produtoCategorias[key]||""};});
 }
 function lojaProdutoSelecionado(key){return lojaDraft.produtosSelecionados.indexOf(key)>=0;}
 function lojaProdutosPorCategoria(produtos){
-  return lojaDraft.categoriaAtiva==="Todos"?produtos:produtos.filter(p=>p.categoria===lojaDraft.categoriaAtiva);
+  return lojaDraft.categoriaAtiva==="Todos"?produtos:produtos.filter(p=>lojaDraft.produtoCategorias[p.key]===lojaDraft.categoriaAtiva);
 }
 function lojaProdutosSelecionados(){
   const ativos=new Set(lojaDraft.produtosSelecionados);
@@ -824,6 +815,7 @@ function lojaSetCategoria(cat){
 function lojaToggleCategoriaSugestao(cat){
   const ativa=lojaDraft.categoriasAtivas.some(c=>lojaNormCategoria(c)===lojaNormCategoria(cat));
   if(ativa){
+    lojaLimparCategoriaDosProdutos(cat);
     lojaDraft.categoriasAtivas=lojaDraft.categoriasAtivas.filter(c=>lojaNormCategoria(c)!==lojaNormCategoria(cat));
     if(lojaNormCategoria(lojaDraft.categoriaAtiva)===lojaNormCategoria(cat))lojaDraft.categoriaAtiva="Todos";
   }else{
@@ -841,8 +833,14 @@ function lojaAdicionarCategoria(){
   lojaDraft.categoriasAtivas=[...lojaDraft.categoriasAtivas,nome];input.value="";
   lojaRefreshCategorias();toast("Categoria visual adicionada. Nada foi salvo.");
 }
+function lojaLimparCategoriaDosProdutos(cat){
+  Object.keys(lojaDraft.produtoCategorias||{}).forEach(k=>{
+    if(lojaNormCategoria(lojaDraft.produtoCategorias[k])===lojaNormCategoria(cat))delete lojaDraft.produtoCategorias[k];
+  });
+}
 function lojaRemoverCategoria(cat){
   if(cat==="Todos")return;
+  lojaLimparCategoriaDosProdutos(cat);
   lojaDraft.categoriasAtivas=lojaDraft.categoriasAtivas.filter(c=>lojaNormCategoria(c)!==lojaNormCategoria(cat));
   if(lojaNormCategoria(lojaDraft.categoriaAtiva)===lojaNormCategoria(cat))lojaDraft.categoriaAtiva="Todos";
   lojaRefreshCategorias();toast("Categoria removida da prévia. Nada foi salvo.");
@@ -872,17 +870,28 @@ function lojaToggleProduto(btn){
 }
 function limparProdutosLoja(){
   lojaDraft.produtosSelecionados=[];
+  lojaDraft.produtoCategorias={};
   renderLojaProdutos();renderLojaPreview();
   toast("Seleção visual limpa. Nada foi salvo.");
+}
+function lojaSetProdutoCategoria(key,cat){
+  lojaDraft.produtoCategorias=lojaDraft.produtoCategorias||{};
+  if(!cat)delete lojaDraft.produtoCategorias[key];
+  else lojaDraft.produtoCategorias[key]=cat;
+  renderLojaProdutos();renderLojaPreview();
+  toast("Categoria do produto atualizada. Nada foi salvo.");
 }
 function renderLojaProdutos(){
   const el=document.getElementById("loja-produtos-box");if(!el)return;
   const produtos=lojaProdutosVisuais();
   el.innerHTML=produtos.map(p=>{
     const on=lojaProdutoSelecionado(p.key);
+    const cat=lojaDraft.produtoCategorias[p.key]||"";
+    const catTexto=cat?`Também em: ${esc(cat)}`:"Só em Todos";
+    const catOptions=`<option value="">Só em Todos</option>`+lojaDraft.categoriasAtivas.map(c=>`<option value="${esc(c)}" ${cat===c?"selected":""}>${esc(c)}</option>`).join("");
     return `<div class="loja-product-card ${on?"on":"off"}">
       <div class="loja-product-thumb">🍰</div>
-      <div class="loja-product-main"><div class="name">${esc(p.nome)}</div><div class="meta">${esc(p.origem)} · Categoria visual: ${esc(p.categoria)}</div><div class="loja-product-status">${on?"Na vitrine":"Oculto"}</div></div>
+      <div class="loja-product-main"><div class="name">${esc(p.nome)}</div><div class="meta">${esc(p.origem)} · Categoria visual: ${catTexto}</div><div class="loja-product-status">${on?"Na vitrine":"Oculto"}</div><label class="meta">Categoria visual</label><select class="loja-input" data-key="${esc(p.key)}" onchange="lojaSetProdutoCategoria(this.dataset.key,this.value)">${catOptions}</select></div>
       <button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaToggleProduto(this)">${on?"Ocultar":"Mostrar"}</button>
     </div>`;
   }).join("")||`<div class="loja-empty-products">Nenhum produto visual nesta categoria.</div>`;
@@ -973,7 +982,7 @@ function render_loja(){
 
   <div class="card">
     <div class="loja-products-head">
-      <div><div class="name">Produtos da loja</div><p class="hint">Escolha quais produtos entram na prévia da vitrine. As categorias acima organizam a prévia, mas todos os produtos continuam disponíveis para seleção.</p></div>
+      <div><div class="name">Produtos da loja</div><p class="hint">Escolha quais produtos entram na prévia da vitrine. Depois defina se cada um aparece só em Todos ou também em uma categoria específica.</p></div>
       <span class="loja-badge">Seleção visual</span>
     </div>
     <div class="loja-product-list" id="loja-produtos-box"></div>
