@@ -262,6 +262,10 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-category-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .loja-cat-chip{border:1.5px solid var(--line);background:#fff;color:var(--cocoa-soft);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:900}
 .loja-cat-chip.on{background:var(--cocoa);border-color:var(--cocoa);color:#fff}
+.loja-cat-chip.sug{background:#FAF3EC}
+.loja-cat-chip.sug.on{background:#FFF8EF;color:var(--cocoa);border-color:#B88A64}
+.loja-cat-row{display:inline-flex;align-items:center;gap:6px}
+.loja-cat-remove{border:0;background:rgba(90,56,37,.1);color:inherit;border-radius:999px;padding:2px 6px;font-size:10px;font-weight:900}
 .loja-category-note{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
 @media (max-width:420px){.loja-actions,.loja-link-row{flex-direction:column}.loja-actions .btn,.loja-link-row .btn{width:100%}.loja-check,.loja-media-grid{grid-template-columns:1fr}}
 /* menu */
@@ -777,25 +781,31 @@ function updPreco(id,key){
 }
 
 /* ---------- LOJA ---------- */
-const LOJA_CATEGORIAS=["Todos","Bolos","Docinhos","Brownies","Encomendas"];
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Bolos, doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",produtosSelecionados:[]};
+const LOJA_CATEGORIAS_SUGERIDAS=["Pronta entrega","Encomendas","Personalizados","Kits","Sobremesas","Especiais"];
+const LOJA_CATEGORIAS_MAX=6;
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[]};
 function lojaSlug(nome){
   const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
   return slug||"loja-confeito";
 }
 function lojaLink(){return "useconfeito.com/loja/"+lojaSlug(lojaDraft.nome);}
 function lojaSet(k,val){lojaDraft[k]=val;const link=document.getElementById("loja-link-modelo");if(link)link.textContent=lojaLink();renderLojaPreview();}
-function lojaCategoriaPorNome(nome){
-  const n=String(nome||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-  if(n.includes("bolo"))return"Bolos";
-  if(n.includes("brigadeiro")||n.includes("beijinho")||n.includes("docinho"))return"Docinhos";
-  if(n.includes("brownie"))return"Brownies";
-  return"Encomendas";
+function lojaNormCategoria(cat){return String(cat||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();}
+function lojaCategorias(){return["Todos",...lojaDraft.categoriasAtivas];}
+function lojaCategoriaExiste(cat){const n=lojaNormCategoria(cat);return lojaCategorias().some(c=>lojaNormCategoria(c)===n);}
+function lojaCategoriaPorNome(nome,i){
+  const cats=lojaDraft.categoriasAtivas.length?lojaDraft.categoriasAtivas:["Pronta entrega"];
+  const n=lojaNormCategoria(nome);
+  const busca=cats.find(c=>n.includes(lojaNormCategoria(c)));
+  if(busca)return busca;
+  if(n.includes("kit")||n.includes("combo")||n.includes("caixa")){const c=cats.find(x=>lojaNormCategoria(x).includes("kit"));if(c)return c;}
+  if(n.includes("personal")||n.includes("tema")||n.includes("festa")||n.includes("aniversario")){const c=cats.find(x=>lojaNormCategoria(x).includes("personal")||lojaNormCategoria(x).includes("encomenda"));if(c)return c;}
+  return cats[i%cats.length]||"Pronta entrega";
 }
 function lojaProdutosVisuais(){
-  const reais=(state.produtos||[]).filter(p=>p&&p.nome).slice(0,6).map((p,i)=>({key:"real-"+(p.id||i),nome:p.nome,origem:"Produto cadastrado",categoria:lojaCategoriaPorNome(p.nome)}));
+  const reais=(state.produtos||[]).filter(p=>p&&p.nome).slice(0,6).map((p,i)=>({key:"real-"+(p.id||i),nome:p.nome,origem:"Produto cadastrado",categoria:lojaCategoriaPorNome(p.nome,i)}));
   if(reais.length)return reais;
-  return["Bolo de Cenoura","Brigadeiro Gourmet","Brownie"].map((nome,i)=>({key:"exemplo-"+i,nome,origem:"Exemplo visual",categoria:lojaCategoriaPorNome(nome)}));
+  return["Produto artesanal","Kit festa","Encomenda personalizada"].map((nome,i)=>({key:"exemplo-"+i,nome,origem:"Exemplo visual",categoria:lojaCategoriaPorNome(nome,i)}));
 }
 function lojaProdutoSelecionado(key){return lojaDraft.produtosSelecionados.indexOf(key)>=0;}
 function lojaProdutosPorCategoria(produtos){
@@ -805,17 +815,49 @@ function lojaProdutosSelecionados(){
   const ativos=new Set(lojaDraft.produtosSelecionados);
   return lojaProdutosVisuais().filter(p=>ativos.has(p.key));
 }
+function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
   lojaDraft.categoriaAtiva=cat;
-  renderLojaCategorias();renderLojaProdutos();renderLojaPreview();
+  lojaRefreshCategorias();
   toast("Categoria visual alterada. Nada foi salvo.");
+}
+function lojaToggleCategoriaSugestao(cat){
+  const ativa=lojaDraft.categoriasAtivas.some(c=>lojaNormCategoria(c)===lojaNormCategoria(cat));
+  if(ativa){
+    lojaDraft.categoriasAtivas=lojaDraft.categoriasAtivas.filter(c=>lojaNormCategoria(c)!==lojaNormCategoria(cat));
+    if(lojaNormCategoria(lojaDraft.categoriaAtiva)===lojaNormCategoria(cat))lojaDraft.categoriaAtiva="Todos";
+  }else{
+    if(lojaDraft.categoriasAtivas.length>=LOJA_CATEGORIAS_MAX){toast("Limite de 6 categorias visuais nesta prévia.");return;}
+    lojaDraft.categoriasAtivas=[...lojaDraft.categoriasAtivas,cat];
+  }
+  lojaRefreshCategorias();toast("Categoria visual atualizada. Nada foi salvo.");
+}
+function lojaAdicionarCategoria(){
+  const input=document.getElementById("loja-nova-categoria");if(!input)return;
+  const nome=input.value.trim().slice(0,20);
+  if(!nome){toast("Digite um nome para a categoria.");return;}
+  if(lojaCategoriaExiste(nome)){toast("Essa categoria já existe na prévia.");return;}
+  if(lojaDraft.categoriasAtivas.length>=LOJA_CATEGORIAS_MAX){toast("Limite de 6 categorias visuais nesta prévia.");return;}
+  lojaDraft.categoriasAtivas=[...lojaDraft.categoriasAtivas,nome];input.value="";
+  lojaRefreshCategorias();toast("Categoria visual adicionada. Nada foi salvo.");
+}
+function lojaRemoverCategoria(cat){
+  if(cat==="Todos")return;
+  lojaDraft.categoriasAtivas=lojaDraft.categoriasAtivas.filter(c=>lojaNormCategoria(c)!==lojaNormCategoria(cat));
+  if(lojaNormCategoria(lojaDraft.categoriaAtiva)===lojaNormCategoria(cat))lojaDraft.categoriaAtiva="Todos";
+  lojaRefreshCategorias();toast("Categoria removida da prévia. Nada foi salvo.");
 }
 function renderLojaCategorias(){
   const el=document.getElementById("loja-categorias-box");if(!el)return;
-  el.innerHTML=LOJA_CATEGORIAS.map(c=>`<button class="loja-cat-chip ${lojaDraft.categoriaAtiva===c?"on":""}" onclick="lojaSetCategoria('${c}')">${c}</button>`).join("");
+  const ativas=lojaCategorias().map(c=>`<span class="loja-cat-row"><button class="loja-cat-chip ${lojaNormCategoria(lojaDraft.categoriaAtiva)===lojaNormCategoria(c)?"on":""}" data-cat="${esc(c)}" onclick="lojaSetCategoria(this.dataset.cat)">${esc(c)}</button>${c==="Todos"?"":`<button class="loja-cat-remove" data-cat="${esc(c)}" onclick="lojaRemoverCategoria(this.dataset.cat)">Remover</button>`}</span>`).join("");
+  const sugestoes=LOJA_CATEGORIAS_SUGERIDAS.map(c=>{const on=lojaDraft.categoriasAtivas.some(x=>lojaNormCategoria(x)===lojaNormCategoria(c));return`<button class="loja-cat-chip sug ${on?"on":""}" data-cat="${esc(c)}" onclick="lojaToggleCategoriaSugestao(this.dataset.cat)">${esc(c)}</button>`;}).join("");
+  el.innerHTML=`<div class="chan-name">Categorias ativas</div><div class="loja-category-list">${ativas}</div>
+    <div class="chan-name">Sugestões</div><div class="loja-category-list">${sugestoes}</div>
+    <div class="loja-link-row"><input class="loja-input" id="loja-nova-categoria" maxlength="20" placeholder="Ex.: Páscoa, Salgados, Cupcakes"><button class="btn ghost sm" onclick="lojaAdicionarCategoria()">Adicionar</button></div>
+    <div class="loja-category-note">Até 6 categorias visuais além de Todos.</div>`;
 }
 function lojaCategoriaChips(){
-  return LOJA_CATEGORIAS.map(c=>`<button class="loja-cat-chip ${lojaDraft.categoriaAtiva===c?"on":""}" onclick="lojaSetCategoria('${c}')">${c}</button>`).join("");
+  return lojaCategorias().map(c=>`<button class="loja-cat-chip ${lojaNormCategoria(lojaDraft.categoriaAtiva)===lojaNormCategoria(c)?"on":""}" data-cat="${esc(c)}" onclick="lojaSetCategoria(this.dataset.cat)">${esc(c)}</button>`).join("");
 }
 function lojaToggleProduto(btn){
   const key=btn.dataset.key;
@@ -851,7 +893,7 @@ async function copiarModeloLinkLoja(){
 }
 function renderLojaPreview(){
   const el=document.getElementById("loja-preview-box");if(!el)return;
-  const nome=lojaDraft.nome||"Doce Encanto",desc=lojaDraft.desc||"Bolos, doces e encomendas artesanais.";
+  const nome=lojaDraft.nome||"Doce Encanto",desc=lojaDraft.desc||"Doces e encomendas artesanais.";
   const status=lojaDraft.status||"Aberta para pedidos",fechada=status==="Fechada no momento";
   const selecionados=lojaProdutosSelecionados(),produtos=lojaProdutosPorCategoria(selecionados);
   const vazio=selecionados.length?"Nenhum produto selecionado nesta categoria.":"Nenhum produto selecionado para a prévia.";
@@ -890,7 +932,7 @@ function render_loja(){
     <div class="loja-form">
       <div class="loja-field"><label>Nome da loja</label><input class="loja-input" value="${esc(lojaDraft.nome)}" oninput="lojaSet('nome',this.value)" placeholder="Doce Encanto"></div>
       <div class="loja-field"><label>WhatsApp para pedidos</label><input class="loja-input" inputmode="tel" value="${esc(lojaDraft.whats)}" oninput="lojaSet('whats',this.value)" placeholder="(21) 99999-9999"></div>
-      <div class="loja-field"><label>Descrição curta</label><textarea class="loja-input" oninput="lojaSet('desc',this.value)" placeholder="Bolos, doces e encomendas artesanais.">${esc(lojaDraft.desc)}</textarea></div>
+      <div class="loja-field"><label>Descrição curta</label><textarea class="loja-input" oninput="lojaSet('desc',this.value)" placeholder="Doces e encomendas artesanais.">${esc(lojaDraft.desc)}</textarea></div>
       <div class="loja-field"><label>Status da loja</label><select class="loja-input" onchange="lojaSet('status',this.value)">
         <option ${lojaDraft.status==="Aberta para pedidos"?"selected":""}>Aberta para pedidos</option>
         <option ${lojaDraft.status==="Fechada no momento"?"selected":""}>Fechada no momento</option>
@@ -922,8 +964,8 @@ function render_loja(){
 
   <div class="card">
     <div class="loja-products-head">
-      <div><div class="name">Categorias da loja</div><p class="hint">Organize visualmente sua vitrine por tipos de produto. Nada será salvo agora.</p></div>
-      <span class="loja-badge">Prévia</span>
+      <div><div class="name">Categorias da loja</div><p class="hint">Escolha ou crie categorias para organizar a prévia da sua vitrine. Nada será salvo agora.</p></div>
+      <span class="loja-badge">Personalizável</span>
     </div>
     <div class="loja-category-list" id="loja-categorias-box"></div>
     <div class="loja-category-note">As categorias são apenas uma simulação. A loja pública ainda não está ativa.</div>
