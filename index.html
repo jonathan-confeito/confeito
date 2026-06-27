@@ -259,6 +259,10 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-mini-products{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
 .loja-mini-product{background:#FAF3EC;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:11.5px;font-weight:900;color:var(--cocoa-soft)}
 .loja-empty-products{color:var(--muted);font-size:12px;line-height:1.35;margin-top:7px}
+.loja-category-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.loja-cat-chip{border:1.5px solid var(--line);background:#fff;color:var(--cocoa-soft);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:900}
+.loja-cat-chip.on{background:var(--cocoa);border-color:var(--cocoa);color:#fff}
+.loja-category-note{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
 @media (max-width:420px){.loja-actions,.loja-link-row{flex-direction:column}.loja-actions .btn,.loja-link-row .btn{width:100%}.loja-check,.loja-media-grid{grid-template-columns:1fr}}
 /* menu */
 .menu-intro{font-size:13px;color:var(--muted);line-height:1.45;margin:-4px 0 13px}
@@ -773,22 +777,45 @@ function updPreco(id,key){
 }
 
 /* ---------- LOJA ---------- */
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Bolos, doces e encomendas artesanais.",status:"Aberta para pedidos",produtosSelecionados:[]};
+const LOJA_CATEGORIAS=["Todos","Bolos","Docinhos","Brownies","Encomendas"];
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Bolos, doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",produtosSelecionados:[]};
 function lojaSlug(nome){
   const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
   return slug||"loja-confeito";
 }
 function lojaLink(){return "useconfeito.com/loja/"+lojaSlug(lojaDraft.nome);}
 function lojaSet(k,val){lojaDraft[k]=val;const link=document.getElementById("loja-link-modelo");if(link)link.textContent=lojaLink();renderLojaPreview();}
+function lojaCategoriaPorNome(nome){
+  const n=String(nome||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  if(n.includes("bolo"))return"Bolos";
+  if(n.includes("brigadeiro")||n.includes("beijinho")||n.includes("docinho"))return"Docinhos";
+  if(n.includes("brownie"))return"Brownies";
+  return"Encomendas";
+}
 function lojaProdutosVisuais(){
-  const reais=(state.produtos||[]).filter(p=>p&&p.nome).slice(0,6).map((p,i)=>({key:"real-"+(p.id||i),nome:p.nome,origem:"Produto cadastrado"}));
+  const reais=(state.produtos||[]).filter(p=>p&&p.nome).slice(0,6).map((p,i)=>({key:"real-"+(p.id||i),nome:p.nome,origem:"Produto cadastrado",categoria:lojaCategoriaPorNome(p.nome)}));
   if(reais.length)return reais;
-  return["Bolo de Cenoura","Brigadeiro Gourmet","Brownie"].map((nome,i)=>({key:"exemplo-"+i,nome,origem:"Exemplo visual"}));
+  return["Bolo de Cenoura","Brigadeiro Gourmet","Brownie"].map((nome,i)=>({key:"exemplo-"+i,nome,origem:"Exemplo visual",categoria:lojaCategoriaPorNome(nome)}));
 }
 function lojaProdutoSelecionado(key){return lojaDraft.produtosSelecionados.indexOf(key)>=0;}
+function lojaProdutosPorCategoria(produtos){
+  return lojaDraft.categoriaAtiva==="Todos"?produtos:produtos.filter(p=>p.categoria===lojaDraft.categoriaAtiva);
+}
 function lojaProdutosSelecionados(){
   const ativos=new Set(lojaDraft.produtosSelecionados);
   return lojaProdutosVisuais().filter(p=>ativos.has(p.key));
+}
+function lojaSetCategoria(cat){
+  lojaDraft.categoriaAtiva=cat;
+  renderLojaCategorias();renderLojaProdutos();renderLojaPreview();
+  toast("Categoria visual alterada. Nada foi salvo.");
+}
+function renderLojaCategorias(){
+  const el=document.getElementById("loja-categorias-box");if(!el)return;
+  el.innerHTML=LOJA_CATEGORIAS.map(c=>`<button class="loja-cat-chip ${lojaDraft.categoriaAtiva===c?"on":""}" onclick="lojaSetCategoria('${c}')">${c}</button>`).join("");
+}
+function lojaCategoriaChips(){
+  return LOJA_CATEGORIAS.map(c=>`<button class="loja-cat-chip ${lojaDraft.categoriaAtiva===c?"on":""}" onclick="lojaSetCategoria('${c}')">${c}</button>`).join("");
 }
 function lojaToggleProduto(btn){
   const key=btn.dataset.key;
@@ -808,15 +835,15 @@ function limparProdutosLoja(){
 }
 function renderLojaProdutos(){
   const el=document.getElementById("loja-produtos-box");if(!el)return;
-  const produtos=lojaProdutosVisuais();
+  const produtos=lojaProdutosPorCategoria(lojaProdutosVisuais());
   el.innerHTML=produtos.map(p=>{
     const on=lojaProdutoSelecionado(p.key);
     return `<div class="loja-product-card ${on?"on":"off"}">
       <div class="loja-product-thumb">🍰</div>
-      <div class="loja-product-main"><div class="name">${esc(p.nome)}</div><div class="meta">${esc(p.origem)}</div><div class="loja-product-status">${on?"Na vitrine":"Oculto"}</div></div>
+      <div class="loja-product-main"><div class="name">${esc(p.nome)}</div><div class="meta">${esc(p.origem)} · Categoria visual: ${esc(p.categoria)}</div><div class="loja-product-status">${on?"Na vitrine":"Oculto"}</div></div>
       <button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaToggleProduto(this)">${on?"Ocultar":"Mostrar"}</button>
     </div>`;
-  }).join("");
+  }).join("")||`<div class="loja-empty-products">Nenhum produto visual nesta categoria.</div>`;
 }
 async function copiarModeloLinkLoja(){
   try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(lojaLink());}catch(e){}
@@ -826,8 +853,9 @@ function renderLojaPreview(){
   const el=document.getElementById("loja-preview-box");if(!el)return;
   const nome=lojaDraft.nome||"Doce Encanto",desc=lojaDraft.desc||"Bolos, doces e encomendas artesanais.";
   const status=lojaDraft.status||"Aberta para pedidos",fechada=status==="Fechada no momento";
-  const produtos=lojaProdutosSelecionados();
-  const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product">${esc(p.nome)}</span>`).join(""):`<div class="loja-empty-products">Nenhum produto selecionado para a prévia.</div>`;
+  const selecionados=lojaProdutosSelecionados(),produtos=lojaProdutosPorCategoria(selecionados);
+  const vazio=selecionados.length?"Nenhum produto selecionado nesta categoria.":"Nenhum produto selecionado para a prévia.";
+  const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product">${esc(p.nome)}</span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
   el.innerHTML=`<div class="loja-public-top">Confeitô</div>
     <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
     <div class="loja-public-body">
@@ -836,7 +864,7 @@ function renderLojaPreview(){
       <div class="loja-status ${fechada?"fechada":""}">● ${esc(status)}</div>
       <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
       <div class="loja-link">${esc(lojaLink())}</div>
-      <div class="loja-preview-products"><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div></div>
+      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div></div>
     </div>`;
 }
 function render_loja(){
@@ -894,6 +922,15 @@ function render_loja(){
 
   <div class="card">
     <div class="loja-products-head">
+      <div><div class="name">Categorias da loja</div><p class="hint">Organize visualmente sua vitrine por tipos de produto. Nada será salvo agora.</p></div>
+      <span class="loja-badge">Prévia</span>
+    </div>
+    <div class="loja-category-list" id="loja-categorias-box"></div>
+    <div class="loja-category-note">As categorias são apenas uma simulação. A loja pública ainda não está ativa.</div>
+  </div>
+
+  <div class="card">
+    <div class="loja-products-head">
       <div><div class="name">Produtos da loja</div><p class="hint">Escolha visualmente quais produtos apareceriam na sua vitrine. Nada será salvo agora.</p></div>
       <span class="loja-badge">Seleção visual</span>
     </div>
@@ -912,7 +949,7 @@ function render_loja(){
     <p class="hint">3 meses grátis. Depois, R$29,90/mês. Cobrança ainda não está ativa.</p>
     <div class="loja-actions"><button class="btn ghost" onclick="setTab('menu')">Ver no Menu</button></div>
   </div>`;
-  renderLojaPreview();renderLojaProdutos();
+  renderLojaPreview();renderLojaCategorias();renderLojaProdutos();
 }
 
 /* ---------- MENU ---------- */
