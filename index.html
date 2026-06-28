@@ -269,6 +269,9 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-cart-qtd strong{min-width:24px;text-align:center;color:var(--cocoa)}
 .loja-cart-total{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:9px;font-weight:900;color:var(--cocoa)}
 .loja-cart-note{font-size:11.5px;color:var(--muted);line-height:1.35;margin-top:8px}
+.loja-client{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.loja-client-summary{background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:9px;color:var(--cocoa-soft);font-size:12px;line-height:1.45}
+.loja-client-summary b{color:var(--cocoa)}
 .loja-category-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .loja-cat-chip{border:1.5px solid var(--line);background:#fff;color:var(--cocoa-soft);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:900}
 .loja-cat-chip.on{background:var(--cocoa);border-color:var(--cocoa);color:#fff}
@@ -793,7 +796,7 @@ function updPreco(id,key){
 /* ---------- LOJA ---------- */
 const LOJA_CATEGORIAS_SUGERIDAS=["Pronta entrega","Encomendas","Personalizados","Kits","Sobremesas","Especiais"];
 const LOJA_CATEGORIAS_MAX=6;
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},carrinho:{}};
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},carrinho:{},cliente:{nome:"",whatsapp:"",entrega:"Retirada",obs:""}};
 function lojaSlug(nome){
   const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
   return slug||"loja-confeito";
@@ -854,6 +857,40 @@ function renderLojaCarrinho(){
     <div class="loja-cart-qtd"><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,-1)">−</button><strong>${fmt(it.qtd)}</strong><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,1)">+</button><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoRemove(this.dataset.key)">Remover</button></div>
   </div>`).join(""):`<div class="loja-empty-products">Adicione produtos para simular um pedido.</div>`;
   return `<div class="loja-cart"><div class="chan-name">Carrinho da prévia</div><div class="loja-cart-list">${itensHtml}</div><div class="loja-cart-total"><span>Itens no carrinho</span><span>${fmt(lojaCarrinhoQuantidade())}</span></div><div class="loja-cart-note">Carrinho apenas demonstrativo. Nenhum pedido será criado. Os valores da loja serão definidos em uma etapa futura.</div><button class="btn primary" style="width:100%;margin-top:9px" onclick="toast('Pedido visual. O envio pelo WhatsApp ainda não está ativo.')">Simular envio</button></div>`;
+}
+function lojaClienteResumoHtml(){
+  const c=lojaDraft.cliente||{};
+  const linhas=[];
+  if(c.nome)linhas.push(`<div><b>Cliente:</b> ${esc(c.nome)}</div>`);
+  if(c.whatsapp)linhas.push(`<div><b>WhatsApp:</b> ${esc(c.whatsapp)}</div>`);
+  if(c.entrega)linhas.push(`<div><b>Recebimento:</b> ${esc(c.entrega)}</div>`);
+  if(c.obs)linhas.push(`<div><b>Observação:</b> ${esc(c.obs)}</div>`);
+  return linhas.length?linhas.join(""):`<div class="loja-empty-products">Preencha os dados para visualizar como o pedido ficará.</div>`;
+}
+function renderLojaClienteResumo(){
+  const el=document.getElementById("loja-cliente-resumo");if(el)el.innerHTML=lojaClienteResumoHtml();
+}
+function lojaClienteSet(campo,valor){
+  if(!["nome","whatsapp","entrega","obs"].includes(campo))return;
+  lojaDraft.cliente=lojaDraft.cliente||{nome:"",whatsapp:"",entrega:"Retirada",obs:""};
+  lojaDraft.cliente[campo]=valor;
+  renderLojaClienteResumo();
+}
+function renderLojaCliente(){
+  const c=lojaDraft.cliente||{nome:"",whatsapp:"",entrega:"Retirada",obs:""};
+  return `<div class="loja-client"><div class="chan-name">Dados do cliente</div><p class="hint">Simule as informações que o cliente preencheria antes de enviar o pedido.</p>
+    <div class="loja-form">
+      <div class="loja-field"><label>Nome do cliente</label><input class="loja-input" value="${esc(c.nome||"")}" oninput="lojaClienteSet('nome',this.value)" placeholder="Ex: Maria"></div>
+      <div class="loja-field"><label>WhatsApp do cliente</label><input class="loja-input" inputmode="tel" value="${esc(c.whatsapp||"")}" oninput="lojaClienteSet('whatsapp',this.value)" placeholder="Ex: (21) 99999-9999"></div>
+      <div class="loja-field"><label>Como quer receber?</label><select class="loja-input" onchange="lojaClienteSet('entrega',this.value)">
+        <option ${c.entrega==="Retirada"?"selected":""}>Retirada</option>
+        <option ${c.entrega==="Entrega"?"selected":""}>Entrega</option>
+      </select></div>
+      <div class="loja-field"><label>Observação do pedido</label><textarea class="loja-input" oninput="lojaClienteSet('obs',this.value)" placeholder="Ex: retirar às 16h, sem granulado, entregar na portaria...">${esc(c.obs||"")}</textarea></div>
+    </div>
+    <div class="loja-client-summary" id="loja-cliente-resumo">${lojaClienteResumoHtml()}</div>
+    <div class="loja-cart-note">Dados apenas visuais. Nada será enviado agora.</div>
+  </div>`;
 }
 function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
@@ -959,6 +996,7 @@ function renderLojaPreview(){
   const vazio=selecionados.length?"Nenhum produto selecionado nesta categoria.":"Nenhum produto selecionado para a prévia.";
   const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product"><span>${esc(p.nome)}</span><button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaCarrinhoAdd(this.dataset.key)">Adicionar</button></span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
   const carrinhoHtml=renderLojaCarrinho();
+  const clienteHtml=renderLojaCliente();
   el.innerHTML=`<div class="loja-public-top">Confeitô</div>
     <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
     <div class="loja-public-body">
@@ -967,7 +1005,7 @@ function renderLojaPreview(){
       <div class="loja-status ${fechada?"fechada":""}">● ${esc(status)}</div>
       <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
       <div class="loja-link">${esc(lojaLink())}</div>
-      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}</div>
+      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}${clienteHtml}</div>
     </div>`;
 }
 function render_loja(){
@@ -1013,13 +1051,12 @@ function render_loja(){
   <div class="card">
     <div class="sug-lab" style="margin-top:0;margin-bottom:8px">Como os clientes vão comprar</div>
     <div class="loja-steps">
-      <div class="loja-step"><b>1</b><span>Cliente acessa seu link</span></div>
-      <div class="loja-step"><b>2</b><span>Escolhe os produtos</span></div>
-      <div class="loja-step"><b>3</b><span>Monta o carrinho</span></div>
-      <div class="loja-step"><b>4</b><span>Confere nome e WhatsApp</span></div>
-      <div class="loja-step"><b>5</b><span>Envia o pedido para a confeiteira</span></div>
+      <div class="loja-step"><b>1</b><span>Cliente escolhe produtos</span></div>
+      <div class="loja-step"><b>2</b><span>Monta o carrinho</span></div>
+      <div class="loja-step"><b>3</b><span>Preenche nome, WhatsApp e retirada/entrega</span></div>
+      <div class="loja-step"><b>4</b><span>Envia o pedido para a confeiteira</span></div>
     </div>
-    <p class="hint">Nesta prévia, o carrinho é apenas visual. Nenhum pedido será enviado. Na versão real, o cliente verá apenas produtos públicos.</p>
+    <p class="hint">Nesta prévia, os dados são apenas visuais. Nenhum pedido será enviado.</p>
   </div>
 
   <div class="card loja-preview" id="loja-preview-box"></div>
