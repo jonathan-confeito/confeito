@@ -816,7 +816,6 @@ function lojaProdutosSelecionados(){
   const ativos=new Set(lojaDraft.produtosSelecionados);
   return lojaProdutosVisuais().filter(p=>ativos.has(p.key));
 }
-function lojaPrecoVisual(produto,i){const precos=[12,18,25,35];return precos[Math.max(0,i)%precos.length];}
 function lojaCarrinhoItens(){
   const produtos=lojaProdutosVisuais();
   return Object.keys(lojaDraft.carrinho||{}).map(key=>{
@@ -824,11 +823,10 @@ function lojaCarrinhoItens(){
     if(i<0)return null;
     const qtd=Math.max(0,Number(lojaDraft.carrinho[key])||0);
     if(qtd<=0)return null;
-    const produto=produtos[i],preco=lojaPrecoVisual(produto,i);
-    return{key,produto,qtd,preco,subtotal:qtd*preco};
+    return{key,produto:produtos[i],qtd};
   }).filter(Boolean);
 }
-function lojaCarrinhoTotal(){return lojaCarrinhoItens().reduce((s,it)=>s+it.subtotal,0);}
+function lojaCarrinhoQuantidade(){return lojaCarrinhoItens().reduce((s,it)=>s+it.qtd,0);}
 function lojaCarrinhoAdd(key){
   if(!lojaProdutosVisuais().some(p=>p.key===key))return;
   lojaDraft.carrinho=lojaDraft.carrinho||{};
@@ -852,10 +850,10 @@ function lojaCarrinhoRemove(key){
 function renderLojaCarrinho(){
   const itens=lojaCarrinhoItens();
   const itensHtml=itens.length?itens.map(it=>`<div class="loja-cart-item">
-    <div class="loja-cart-info"><b>${esc(it.produto.nome)}</b><span>${brl(it.preco)} un. · subtotal ${brl(it.subtotal)}</span></div>
+    <div class="loja-cart-info"><b>${esc(it.produto.nome)}</b><span>Quantidade: ${fmt(it.qtd)}</span></div>
     <div class="loja-cart-qtd"><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,-1)">−</button><strong>${fmt(it.qtd)}</strong><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,1)">+</button><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoRemove(this.dataset.key)">Remover</button></div>
   </div>`).join(""):`<div class="loja-empty-products">Adicione produtos para simular um pedido.</div>`;
-  return `<div class="loja-cart"><div class="chan-name">Carrinho da prévia</div><div class="loja-cart-list">${itensHtml}</div><div class="loja-cart-total"><span>Total visual</span><span>${brl(lojaCarrinhoTotal())}</span></div><div class="loja-cart-note">Valores apenas ilustrativos nesta prévia. Carrinho apenas demonstrativo. Nenhum pedido será criado.</div><button class="btn primary" style="width:100%;margin-top:9px" onclick="toast('Pedido visual. O envio pelo WhatsApp ainda não está ativo.')">Simular envio</button></div>`;
+  return `<div class="loja-cart"><div class="chan-name">Carrinho da prévia</div><div class="loja-cart-list">${itensHtml}</div><div class="loja-cart-total"><span>Itens no carrinho</span><span>${fmt(lojaCarrinhoQuantidade())}</span></div><div class="loja-cart-note">Carrinho apenas demonstrativo. Nenhum pedido será criado. Os valores da loja serão definidos em uma etapa futura.</div><button class="btn primary" style="width:100%;margin-top:9px" onclick="toast('Pedido visual. O envio pelo WhatsApp ainda não está ativo.')">Simular envio</button></div>`;
 }
 function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
