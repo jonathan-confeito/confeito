@@ -283,6 +283,8 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-order-box li{margin:2px 0}
 .loja-order-data{border-top:1px solid var(--line);margin-top:9px;padding-top:9px}
 .loja-order-data b{color:var(--cocoa)}
+.loja-message{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.loja-message-box{white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px;margin-top:9px;font-size:12px;color:var(--cocoa-soft);line-height:1.45}
 .loja-category-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .loja-cat-chip{border:1.5px solid var(--line);background:#fff;color:var(--cocoa-soft);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:900}
 .loja-cat-chip.on{background:var(--cocoa);border-color:var(--cocoa);color:#fff}
@@ -942,6 +944,7 @@ function lojaClienteSet(campo,valor){
   lojaDraft.cliente[campo]=valor;
   renderLojaClienteResumo();
   renderLojaPedidoResumo();
+  renderLojaMensagemPreview();
 }
 function renderLojaCliente(){
   const c=lojaDraft.cliente||{nome:"",whatsapp:"",entrega:"Retirada",obs:""};
@@ -974,6 +977,31 @@ function renderLojaPedidoResumo(){
 }
 function renderLojaPedido(){
   return `<div class="loja-order"><div class="chan-name">Resumo do pedido</div><p class="hint">Veja como as informações apareceriam antes do envio.</p><div id="loja-pedido-resumo">${lojaPedidoResumoHtml()}</div><div class="loja-cart-note">Resumo apenas visual. Nenhum pedido será criado.</div></div>`;
+}
+function lojaMensagemPedidoTexto(){
+  const itens=lojaCarrinhoItens();
+  if(!itens.length)return "Adicione produtos ao carrinho para visualizar a mensagem.";
+  const c=lojaDraft.cliente||{};
+  const linhas=[
+    `Olá! Tenho uma nova mensagem pela loja ${lojaDraft.nome||"Doce Encanto"}.`,
+    "",
+    "Itens:",
+    ...itens.map(it=>`• ${fmt(it.qtd)}x ${it.produto.nome} — ${lojaPrecoPublicoUnitario(it.key)}`),
+    "",
+    `Cliente: ${c.nome||"não informado"}`,
+    `WhatsApp: ${c.whatsapp||"não informado"}`,
+    `Recebimento: ${c.entrega||"Retirada"}`,
+    `Observação: ${c.obs||"sem observação"}`,
+    "",
+    "Prévia visual. Nada será enviado agora."
+  ];
+  return linhas.join("\n");
+}
+function renderLojaMensagemPreview(){
+  const el=document.getElementById("loja-mensagem-preview");if(el)el.innerHTML=esc(lojaMensagemPedidoTexto());
+}
+function renderLojaMensagem(){
+  return `<div class="loja-message"><div class="chan-name">Prévia da mensagem</div><p class="hint">Veja como a mensagem do pedido poderia aparecer futuramente.</p><div class="loja-message-box" id="loja-mensagem-preview">${esc(lojaMensagemPedidoTexto())}</div><div class="loja-cart-note">Mensagem apenas visual. Nenhum pedido será criado e nenhuma venda será registrada agora.</div><button class="btn ghost" style="width:100%;margin-top:9px" onclick="toast('Mensagem visual. Nada foi enviado pelo WhatsApp.')">Simular mensagem</button></div>`;
 }
 function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
@@ -1089,6 +1117,7 @@ function renderLojaPreview(){
   const carrinhoHtml=renderLojaCarrinho();
   const clienteHtml=renderLojaCliente();
   const pedidoHtml=renderLojaPedido();
+  const mensagemHtml=renderLojaMensagem();
   el.innerHTML=`<div class="loja-public-top">Confeitô</div>
     <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
     <div class="loja-public-body">
@@ -1097,7 +1126,7 @@ function renderLojaPreview(){
       <div class="loja-status ${fechada?"fechada":""}">● ${esc(status)}</div>
       <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
       <div class="loja-link">${esc(lojaLink())}</div>
-      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}${clienteHtml}${pedidoHtml}</div>
+      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}${clienteHtml}${pedidoHtml}${mensagemHtml}</div>
     </div>`;
 }
 function render_loja(){
@@ -1147,9 +1176,9 @@ function render_loja(){
       <div class="loja-step"><b>2</b><span>Monta o carrinho</span></div>
       <div class="loja-step"><b>3</b><span>Preenche nome, WhatsApp e retirada/entrega</span></div>
       <div class="loja-step"><b>4</b><span>Confere o resumo</span></div>
-      <div class="loja-step"><b>5</b><span>Envia o pedido para a confeiteira</span></div>
+      <div class="loja-step"><b>5</b><span>Envia a mensagem para a confeiteira</span></div>
     </div>
-    <p class="hint">Nesta prévia, o resumo é apenas visual. Nenhum pedido será enviado.</p>
+    <p class="hint">Nesta prévia, a mensagem é apenas visual. Nada será enviado.</p>
   </div>
 
   <div class="card loja-preview" id="loja-preview-box"></div>
