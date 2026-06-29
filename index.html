@@ -1008,7 +1008,6 @@ function lojaToggleProduto(btn){
   if(lojaProdutoSelecionado(key)){
     lojaDraft.produtosSelecionados=lojaDraft.produtosSelecionados.filter(k=>k!==key);
     if(lojaDraft.carrinho)delete lojaDraft.carrinho[key];
-    if(lojaDraft.produtoPrecos)delete lojaDraft.produtoPrecos[key];
     toast("Produto oculto da prévia visual. Nada foi salvo.");
   }else{
     lojaDraft.produtosSelecionados=[...lojaDraft.produtosSelecionados,key];
