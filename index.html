@@ -272,6 +272,12 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-client{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
 .loja-client-summary{background:#FAF3EC;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:9px;color:var(--cocoa-soft);font-size:12px;line-height:1.45}
 .loja-client-summary b{color:var(--cocoa)}
+.loja-order{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.loja-order-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:9px;font-size:12px;color:var(--cocoa-soft);line-height:1.45}
+.loja-order-box ul{margin:0;padding-left:17px}
+.loja-order-box li{margin:2px 0}
+.loja-order-data{border-top:1px solid var(--line);margin-top:9px;padding-top:9px}
+.loja-order-data b{color:var(--cocoa)}
 .loja-category-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .loja-cat-chip{border:1.5px solid var(--line);background:#fff;color:var(--cocoa-soft);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:900}
 .loja-cat-chip.on{background:var(--cocoa);border-color:var(--cocoa);color:#fff}
@@ -875,6 +881,7 @@ function lojaClienteSet(campo,valor){
   lojaDraft.cliente=lojaDraft.cliente||{nome:"",whatsapp:"",entrega:"Retirada",obs:""};
   lojaDraft.cliente[campo]=valor;
   renderLojaClienteResumo();
+  renderLojaPedidoResumo();
 }
 function renderLojaCliente(){
   const c=lojaDraft.cliente||{nome:"",whatsapp:"",entrega:"Retirada",obs:""};
@@ -891,6 +898,22 @@ function renderLojaCliente(){
     <div class="loja-client-summary" id="loja-cliente-resumo">${lojaClienteResumoHtml()}</div>
     <div class="loja-cart-note">Dados apenas visuais. Nada será enviado agora.</div>
   </div>`;
+}
+function lojaPedidoResumoHtml(){
+  const itens=lojaCarrinhoItens();
+  const c=lojaDraft.cliente||{};
+  const itensHtml=itens.length?`<ul>${itens.map(it=>`<li>${fmt(it.qtd)}x ${esc(it.produto.nome)}</li>`).join("")}</ul>`:`<div class="loja-empty-products">Adicione produtos ao carrinho para visualizar o resumo.</div>`;
+  const cliente=c.nome?esc(c.nome):"não informado";
+  const whatsapp=c.whatsapp?esc(c.whatsapp):"não informado";
+  const entrega=c.entrega?esc(c.entrega):"Retirada";
+  const obs=c.obs?esc(c.obs):"sem observação";
+  return `<div class="loja-order-box">${itensHtml}<div class="loja-order-data"><div><b>Cliente:</b> ${cliente}</div><div><b>WhatsApp:</b> ${whatsapp}</div><div><b>Recebimento:</b> ${entrega}</div><div><b>Observação:</b> ${obs}</div></div></div>`;
+}
+function renderLojaPedidoResumo(){
+  const el=document.getElementById("loja-pedido-resumo");if(el)el.innerHTML=lojaPedidoResumoHtml();
+}
+function renderLojaPedido(){
+  return `<div class="loja-order"><div class="chan-name">Resumo do pedido</div><p class="hint">Veja como as informações apareceriam antes do envio.</p><div id="loja-pedido-resumo">${lojaPedidoResumoHtml()}</div><div class="loja-cart-note">Resumo apenas visual. Nenhum pedido será criado.</div></div>`;
 }
 function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
@@ -997,6 +1020,7 @@ function renderLojaPreview(){
   const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product"><span>${esc(p.nome)}</span><button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaCarrinhoAdd(this.dataset.key)">Adicionar</button></span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
   const carrinhoHtml=renderLojaCarrinho();
   const clienteHtml=renderLojaCliente();
+  const pedidoHtml=renderLojaPedido();
   el.innerHTML=`<div class="loja-public-top">Confeitô</div>
     <div class="loja-cover"><div class="loja-avatar">🍰</div></div>
     <div class="loja-public-body">
@@ -1005,7 +1029,7 @@ function renderLojaPreview(){
       <div class="loja-status ${fechada?"fechada":""}">● ${esc(status)}</div>
       <button class="btn primary" style="width:100%" onclick="toast('Prévia visual. A loja pública ainda não está ativa.')">Ver prévia da loja</button>
       <div class="loja-link">${esc(lojaLink())}</div>
-      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}${clienteHtml}</div>
+      <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}${clienteHtml}${pedidoHtml}</div>
     </div>`;
 }
 function render_loja(){
@@ -1054,9 +1078,10 @@ function render_loja(){
       <div class="loja-step"><b>1</b><span>Cliente escolhe produtos</span></div>
       <div class="loja-step"><b>2</b><span>Monta o carrinho</span></div>
       <div class="loja-step"><b>3</b><span>Preenche nome, WhatsApp e retirada/entrega</span></div>
-      <div class="loja-step"><b>4</b><span>Envia o pedido para a confeiteira</span></div>
+      <div class="loja-step"><b>4</b><span>Confere o resumo</span></div>
+      <div class="loja-step"><b>5</b><span>Envia o pedido para a confeiteira</span></div>
     </div>
-    <p class="hint">Nesta prévia, os dados são apenas visuais. Nenhum pedido será enviado.</p>
+    <p class="hint">Nesta prévia, o resumo é apenas visual. Nenhum pedido será enviado.</p>
   </div>
 
   <div class="card loja-preview" id="loja-preview-box"></div>
