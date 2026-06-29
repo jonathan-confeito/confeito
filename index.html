@@ -842,13 +842,29 @@ function lojaCarrinhoQuantidade(){return lojaCarrinhoItens().reduce((s,it)=>s+it
 function lojaPrecoPublicoValor(key){
   return String((lojaDraft.produtoPrecos&&lojaDraft.produtoPrecos[key])||"").replace(/^R\$\s*/i,"").trim();
 }
+function lojaPrecoPublicoNumero(key){
+  const bruto=lojaPrecoPublicoValor(key).replace(/\s/g,"");
+  if(!bruto)return null;
+  let normal=bruto;
+  if(normal.indexOf(",")>=0&&normal.indexOf(".")>=0){
+    normal=normal.lastIndexOf(",")>normal.lastIndexOf(".")?normal.replace(/\./g,"").replace(",","."):normal.replace(/,/g,"");
+  }else if(normal.indexOf(",")>=0){
+    normal=normal.replace(",",".");
+  }
+  if(!/^\d+(\.\d+)?$/.test(normal))return null;
+  const valor=Number(normal);
+  return Number.isFinite(valor)&&valor>=0?valor:null;
+}
+function lojaPrecoPublicoFormatado(key){
+  const valor=lojaPrecoPublicoNumero(key);
+  return valor===null?"Preço a definir":valor.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}).replace(/\s/g," ");
+}
 function lojaPrecoPublicoTexto(key){
-  const v=lojaPrecoPublicoValor(key);
-  return v?`R$ ${esc(v)}`:"Preço a definir";
+  return lojaPrecoPublicoFormatado(key);
 }
 function lojaPrecoPublicoUnitario(key){
-  const v=lojaPrecoPublicoValor(key);
-  return v?`R$ ${esc(v)} cada`:"Preço a definir";
+  const valor=lojaPrecoPublicoFormatado(key);
+  return valor==="Preço a definir"?valor:`${valor} cada`;
 }
 function lojaPrecoPublicoSet(key,valor){
   lojaDraft.produtoPrecos=lojaDraft.produtoPrecos||{};
