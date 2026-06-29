@@ -259,7 +259,10 @@ textarea.loja-input{min-height:74px;resize:vertical;line-height:1.35}
 .loja-mini-products{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
 .loja-mini-product{background:#FAF3EC;border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:11.5px;font-weight:900;color:var(--cocoa-soft);display:inline-flex;align-items:center;gap:7px}
 .loja-mini-product .btn{min-height:27px;padding:5px 8px;font-size:11px}
+.loja-mini-copy{display:flex;flex-direction:column;gap:1px}
+.loja-mini-price{font-size:11px;color:var(--muted);font-weight:800}
 .loja-empty-products{color:var(--muted);font-size:12px;line-height:1.35;margin-top:7px}
+.loja-price-note{font-size:11.5px;color:var(--muted);line-height:1.35;margin-top:5px}
 .loja-cart{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
 .loja-cart-list{display:grid;gap:8px;margin-top:8px}
 .loja-cart-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px}
@@ -802,7 +805,7 @@ function updPreco(id,key){
 /* ---------- LOJA ---------- */
 const LOJA_CATEGORIAS_SUGERIDAS=["Pronta entrega","Encomendas","Personalizados","Kits","Sobremesas","Especiais"];
 const LOJA_CATEGORIAS_MAX=6;
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},carrinho:{},cliente:{nome:"",whatsapp:"",entrega:"Retirada",obs:""}};
+const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},produtoPrecos:{},carrinho:{},cliente:{nome:"",whatsapp:"",entrega:"Retirada",obs:""}};
 function lojaSlug(nome){
   const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
   return slug||"loja-confeito";
@@ -836,6 +839,24 @@ function lojaCarrinhoItens(){
   }).filter(Boolean);
 }
 function lojaCarrinhoQuantidade(){return lojaCarrinhoItens().reduce((s,it)=>s+it.qtd,0);}
+function lojaPrecoPublicoValor(key){
+  return String((lojaDraft.produtoPrecos&&lojaDraft.produtoPrecos[key])||"").replace(/^R\$\s*/i,"").trim();
+}
+function lojaPrecoPublicoTexto(key){
+  const v=lojaPrecoPublicoValor(key);
+  return v?`R$ ${esc(v)}`:"Preço a definir";
+}
+function lojaPrecoPublicoUnitario(key){
+  const v=lojaPrecoPublicoValor(key);
+  return v?`R$ ${esc(v)} cada`:"Preço a definir";
+}
+function lojaPrecoPublicoSet(key,valor){
+  lojaDraft.produtoPrecos=lojaDraft.produtoPrecos||{};
+  const v=String(valor||"").replace(/^R\$\s*/i,"").trim().slice(0,20);
+  if(v)lojaDraft.produtoPrecos[key]=v;
+  else delete lojaDraft.produtoPrecos[key];
+  renderLojaPreview();
+}
 function lojaCarrinhoAdd(key){
   if(!lojaProdutosVisuais().some(p=>p.key===key))return;
   lojaDraft.carrinho=lojaDraft.carrinho||{};
@@ -859,10 +880,10 @@ function lojaCarrinhoRemove(key){
 function renderLojaCarrinho(){
   const itens=lojaCarrinhoItens();
   const itensHtml=itens.length?itens.map(it=>`<div class="loja-cart-item">
-    <div class="loja-cart-info"><b>${esc(it.produto.nome)}</b><span>Quantidade: ${fmt(it.qtd)}</span></div>
+    <div class="loja-cart-info"><b>${esc(it.produto.nome)}</b><span>Quantidade: ${fmt(it.qtd)}</span><span>${lojaPrecoPublicoUnitario(it.key)}</span></div>
     <div class="loja-cart-qtd"><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,-1)">−</button><strong>${fmt(it.qtd)}</strong><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoQtd(this.dataset.key,1)">+</button><button class="btn ghost sm" data-key="${esc(it.key)}" onclick="lojaCarrinhoRemove(this.dataset.key)">Remover</button></div>
   </div>`).join(""):`<div class="loja-empty-products">Adicione produtos para simular um pedido.</div>`;
-  return `<div class="loja-cart"><div class="chan-name">Carrinho da prévia</div><div class="loja-cart-list">${itensHtml}</div><div class="loja-cart-total"><span>Itens no carrinho</span><span>${fmt(lojaCarrinhoQuantidade())}</span></div><div class="loja-cart-note">Carrinho apenas demonstrativo. Nenhum pedido será criado. Os valores da loja serão definidos em uma etapa futura.</div><button class="btn primary" style="width:100%;margin-top:9px" onclick="toast('Pedido visual. O envio pelo WhatsApp ainda não está ativo.')">Simular envio</button></div>`;
+  return `<div class="loja-cart"><div class="chan-name">Carrinho da prévia</div><div class="loja-cart-list">${itensHtml}</div><div class="loja-cart-total"><span>Itens no carrinho</span><span>${fmt(lojaCarrinhoQuantidade())}</span></div><div class="loja-cart-note">Carrinho apenas demonstrativo. Nenhum pedido será criado. Os preços exibidos são apenas visuais.</div><button class="btn primary" style="width:100%;margin-top:9px" onclick="toast('Pedido visual. O envio pelo WhatsApp ainda não está ativo.')">Simular envio</button></div>`;
 }
 function lojaClienteResumoHtml(){
   const c=lojaDraft.cliente||{};
@@ -902,7 +923,7 @@ function renderLojaCliente(){
 function lojaPedidoResumoHtml(){
   const itens=lojaCarrinhoItens();
   const c=lojaDraft.cliente||{};
-  const itensHtml=itens.length?`<ul>${itens.map(it=>`<li>${fmt(it.qtd)}x ${esc(it.produto.nome)}</li>`).join("")}</ul>`:`<div class="loja-empty-products">Adicione produtos ao carrinho para visualizar o resumo.</div>`;
+  const itensHtml=itens.length?`<ul>${itens.map(it=>`<li>${fmt(it.qtd)}x ${esc(it.produto.nome)} — ${lojaPrecoPublicoUnitario(it.key)}</li>`).join("")}</ul>`:`<div class="loja-empty-products">Adicione produtos ao carrinho para visualizar o resumo.</div>`;
   const cliente=c.nome?esc(c.nome):"não informado";
   const whatsapp=c.whatsapp?esc(c.whatsapp):"não informado";
   const entrega=c.entrega?esc(c.entrega):"Retirada";
@@ -971,6 +992,7 @@ function lojaToggleProduto(btn){
   if(lojaProdutoSelecionado(key)){
     lojaDraft.produtosSelecionados=lojaDraft.produtosSelecionados.filter(k=>k!==key);
     if(lojaDraft.carrinho)delete lojaDraft.carrinho[key];
+    if(lojaDraft.produtoPrecos)delete lojaDraft.produtoPrecos[key];
     toast("Produto oculto da prévia visual. Nada foi salvo.");
   }else{
     lojaDraft.produtosSelecionados=[...lojaDraft.produtosSelecionados,key];
@@ -981,6 +1003,7 @@ function lojaToggleProduto(btn){
 function limparProdutosLoja(){
   lojaDraft.produtosSelecionados=[];
   lojaDraft.produtoCategorias={};
+  lojaDraft.produtoPrecos={};
   lojaDraft.carrinho={};
   renderLojaProdutos();renderLojaPreview();
   toast("Seleção visual limpa. Nada foi salvo.");
@@ -1000,9 +1023,10 @@ function renderLojaProdutos(){
     const cat=lojaDraft.produtoCategorias[p.key]||"";
     const catTexto=cat?`Também em: ${esc(cat)}`:"Só em Todos";
     const catOptions=`<option value="">Só em Todos</option>`+lojaDraft.categoriasAtivas.map(c=>`<option value="${esc(c)}" ${cat===c?"selected":""}>${esc(c)}</option>`).join("");
+    const precoCampo=on?`<label class="meta">Preço na loja</label><input class="loja-input" inputmode="decimal" maxlength="20" value="${esc(lojaPrecoPublicoValor(p.key))}" data-key="${esc(p.key)}" oninput="lojaPrecoPublicoSet(this.dataset.key,this.value)" placeholder="Ex: 12,00"><div class="loja-price-note">Preço apenas visual da prévia. Não altera os preços internos.</div>`:"";
     return `<div class="loja-product-card ${on?"on":"off"}">
       <div class="loja-product-thumb">🍰</div>
-      <div class="loja-product-main"><div class="name">${esc(p.nome)}</div><div class="meta">${esc(p.origem)} · Categoria visual: ${catTexto}</div><div class="loja-product-status">${on?"Na vitrine":"Oculto"}</div><label class="meta">Categoria visual</label><select class="loja-input" data-key="${esc(p.key)}" onchange="lojaSetProdutoCategoria(this.dataset.key,this.value)">${catOptions}</select></div>
+      <div class="loja-product-main"><div class="name">${esc(p.nome)}</div><div class="meta">${esc(p.origem)} · Categoria visual: ${catTexto}</div><div class="loja-product-status">${on?"Na vitrine":"Oculto"}</div><label class="meta">Categoria visual</label><select class="loja-input" data-key="${esc(p.key)}" onchange="lojaSetProdutoCategoria(this.dataset.key,this.value)">${catOptions}</select>${precoCampo}</div>
       <button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaToggleProduto(this)">${on?"Ocultar":"Mostrar"}</button>
     </div>`;
   }).join("")||`<div class="loja-empty-products">Nenhum produto visual nesta categoria.</div>`;
@@ -1017,7 +1041,7 @@ function renderLojaPreview(){
   const status=lojaDraft.status||"Aberta para pedidos",fechada=status==="Fechada no momento";
   const selecionados=lojaProdutosSelecionados(),produtos=lojaProdutosPorCategoria(selecionados);
   const vazio=selecionados.length?"Nenhum produto selecionado nesta categoria.":"Nenhum produto selecionado para a prévia.";
-  const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product"><span>${esc(p.nome)}</span><button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaCarrinhoAdd(this.dataset.key)">Adicionar</button></span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
+  const produtoHtml=produtos.length?produtos.map(p=>`<span class="loja-mini-product"><span class="loja-mini-copy"><span>${esc(p.nome)}</span><span class="loja-mini-price">${lojaPrecoPublicoTexto(p.key)}</span></span><button class="btn ghost sm" data-key="${esc(p.key)}" onclick="lojaCarrinhoAdd(this.dataset.key)">Adicionar</button></span>`).join(""):`<div class="loja-empty-products">${vazio}</div>`;
   const carrinhoHtml=renderLojaCarrinho();
   const clienteHtml=renderLojaCliente();
   const pedidoHtml=renderLojaPedido();
