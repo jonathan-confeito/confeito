@@ -835,6 +835,31 @@ function lojaProdutosSelecionados(){
   const ativos=new Set(lojaDraft.produtosSelecionados);
   return lojaProdutosVisuais().filter(p=>ativos.has(p.key));
 }
+function lojaProdutoCategoriaTexto(key){
+  return (lojaDraft.produtoCategorias&&lojaDraft.produtoCategorias[key])||"Todos";
+}
+function lojaTextoPublico(v,limite){
+  return String(v||"").trim().slice(0,limite);
+}
+function lojaPublicaDadosSanitizados(){
+  const categorias=lojaCategorias().map(c=>lojaTextoPublico(c,20)).filter(Boolean).slice(0,LOJA_CATEGORIAS_MAX+1);
+  return {
+    versao:"loja-publica-preview-v1",
+    loja:{
+      nome:lojaTextoPublico(lojaDraft.nome,60),
+      descricao:lojaTextoPublico(lojaDraft.desc,140),
+      status:lojaTextoPublico(lojaDraft.status,40),
+      categorias
+    },
+    produtos:lojaProdutosSelecionados().map(p=>({
+      nome:lojaTextoPublico(p.nome,80),
+      categoria:lojaProdutoCategoriaTexto(p.key),
+      preco:lojaPrecoPublicoTexto(p.key),
+      disponivel:lojaProdutoDisponivel(p.key),
+      origem:p.origem==="Produto cadastrado"?"Produto cadastrado":"Exemplo visual"
+    }))
+  };
+}
 function lojaCarrinhoItens(){
   const produtos=lojaProdutosVisuais();
   return Object.keys(lojaDraft.carrinho||{}).map(key=>{
@@ -1006,6 +1031,29 @@ function renderLojaMensagemPreview(){
 function renderLojaMensagem(){
   return `<div class="loja-message"><div class="chan-name">Prévia da mensagem</div><p class="hint">Veja como a mensagem do pedido poderia aparecer futuramente.</p><div class="loja-message-box" id="loja-mensagem-preview">${esc(lojaMensagemPedidoTexto())}</div><div class="loja-cart-note">Mensagem apenas visual. Nenhum pedido será criado e nenhuma venda será registrada agora.</div><button class="btn ghost" style="width:100%;margin-top:9px" onclick="toast('Mensagem visual. Nada foi enviado pelo WhatsApp.')">Simular mensagem</button></div>`;
 }
+function renderLojaPublicaSegura(){
+  const dados=lojaPublicaDadosSanitizados();
+  const disponiveis=dados.produtos.filter(p=>p.disponivel).length;
+  return `<div class="card loja-safe">
+    <div class="loja-products-head">
+      <div><div class="name">Loja pública segura</div><p class="hint">Estamos preparando a futura loja pública com uma camada separada dos dados internos do seu negócio.</p></div>
+      <span class="loja-badge">Preparação segura</span>
+    </div>
+    <div class="loja-link">A loja pública ainda não está ativa. Nada será publicado agora.</div>
+    <div class="loja-check">
+      <div><b>Poderá aparecer futuramente</b><br>Nome da loja<br>Descrição<br>Categorias<br>Produtos em destaque<br>Preço na loja<br>Disponibilidade</div>
+      <div><b>Continua privado</b><br>Dados internos do negócio<br>Composição das receitas<br>Movimentações do app<br>Informações de teste da prévia<br>Login e dados internos</div>
+    </div>
+    <div class="loja-check">
+      <div><b>Produtos preparados</b><br>${fmt(dados.produtos.length)}</div>
+      <div><b>Produtos disponíveis</b><br>${fmt(disponiveis)}</div>
+    </div>
+  </div>`;
+}
+function renderLojaPublicaSeguraResumo(){
+  const el=document.getElementById("loja-publica-segura-card");
+  if(el)el.innerHTML=renderLojaPublicaSegura();
+}
 function lojaRefreshCategorias(){renderLojaCategorias();renderLojaProdutos();renderLojaPreview();}
 function lojaSetCategoria(cat){
   lojaDraft.categoriaAtiva=cat;
@@ -1131,6 +1179,7 @@ function renderLojaPreview(){
       <div class="loja-link">${esc(lojaLink())}</div>
       <div class="loja-preview-products"><div class="chan-name">Categorias</div><div class="loja-category-list">${lojaCategoriaChips()}</div><div class="chan-name">Produtos em destaque</div><div class="loja-mini-products">${produtoHtml}</div>${carrinhoHtml}${clienteHtml}${pedidoHtml}${mensagemHtml}</div>
     </div>`;
+  renderLojaPublicaSeguraResumo();
 }
 function render_loja(){
   const el=document.getElementById("sc-loja");
@@ -1183,6 +1232,8 @@ function render_loja(){
     </div>
     <p class="hint">Nesta prévia, a mensagem é apenas visual. Nada será enviado.</p>
   </div>
+
+  <div id="loja-publica-segura-card">${renderLojaPublicaSegura()}</div>
 
   <div class="card loja-preview" id="loja-preview-box"></div>
 
