@@ -435,7 +435,11 @@ function loadLocal(){try{const r=localStorage.getItem(userKey());return r?JSON.p
 function persist(){try{localStorage.setItem(userKey(),JSON.stringify(state));}catch(e){if(e&&(e.name==="QuotaExceededError"||/quota/i.test(""+e)))toast("Memória cheia — use uma foto menor ou remova alguma");}}
 function save(){state._ts=Date.now();persist();cloudPushSoon();}
 function migrateState(){
+  if(!state.config)state.config=seed().config;
+  if(!Array.isArray(state.insumos))state.insumos=[];
+  if(!Array.isArray(state.produtos))state.produtos=[];
   state.produtos.forEach(p=>{if(p.estoque==null)p.estoque=0;if(!p.movs)p.movs=[];if(p.alertaEstoque==null)p.alertaEstoque=3;if(!p.precos){const mp=p.meuPreco||0;p.precos={"iFood":mp,"Cartão":mp,"Pix / Dinheiro":mp};}p.itens.forEach(it=>{if(!it.un){const ins=state.insumos.find(x=>x.id===it.insumoId);it.un=ins?ins.un:"un";}});});
+  lojaAplicarConfigPersistida(state.config.lojaVisual);
 }
 function setCloudStatus(t,c){const e=document.getElementById("cloud-status");if(e){e.textContent=t;e.style.color=c||"var(--muted)";}}
 let cloudTimer=null;
@@ -860,6 +864,91 @@ function lojaPublicaDadosSanitizados(){
     }))
   };
 }
+function lojaCategoriasPersistiveis(lista){
+  const out=[],seen=new Set();
+  (Array.isArray(lista)?lista:[]).forEach(c=>{
+    const t=lojaTextoPublico(c,20);
+    const n=lojaNormCategoria(t);
+    if(t&&t!=="Todos"&&!seen.has(n)&&out.length<LOJA_CATEGORIAS_MAX){seen.add(n);out.push(t);}
+  });
+  return out;
+}
+function lojaProdutoKeysPermitidas(){
+  return new Set(lojaProdutosVisuais().map(p=>p.key));
+}
+function lojaKeysPersistiveis(lista,permitidas){
+  const out=[],seen=new Set();
+  (Array.isArray(lista)?lista:[]).forEach(k=>{
+    const key=lojaTextoPublico(k,80);
+    if(key&&permitidas.has(key)&&!seen.has(key)){seen.add(key);out.push(key);}
+  });
+  return out;
+}
+function lojaMapaTextoPersistivel(mapa,permitidas,limite){
+  const out={};
+  Object.keys(mapa||{}).forEach(k=>{
+    const key=lojaTextoPublico(k,80);
+    if(!permitidas.has(key))return;
+    const val=lojaTextoPublico(mapa[k],limite);
+    if(val)out[key]=val;
+  });
+  return out;
+}
+function lojaMapaCategoriaPersistivel(mapa,permitidas,categorias){
+  const out={},cats=new Set(categorias.map(c=>lojaNormCategoria(c)));
+  Object.keys(mapa||{}).forEach(k=>{
+    const key=lojaTextoPublico(k,80);
+    if(!permitidas.has(key))return;
+    const val=lojaTextoPublico(mapa[k],20);
+    if(val&&cats.has(lojaNormCategoria(val)))out[key]=val;
+  });
+  return out;
+}
+function lojaMapaDisponibilidadePersistivel(mapa,permitidas){
+  const out={};
+  Object.keys(mapa||{}).forEach(k=>{
+    const key=lojaTextoPublico(k,80);
+    if(permitidas.has(key)&&mapa[k]===false)out[key]=false;
+  });
+  return out;
+}
+function lojaConfigPersistivelSanitizada(){
+  const permitidas=lojaProdutoKeysPermitidas();
+  const categoriasAtivas=lojaCategoriasPersistiveis(lojaDraft.categoriasAtivas);
+  return {
+    versao:"loja-visual-v1",
+    nome:lojaTextoPublico(lojaDraft.nome,60),
+    desc:lojaTextoPublico(lojaDraft.desc,140),
+    status:lojaTextoPublico(lojaDraft.status,40),
+    categoriasAtivas,
+    produtosSelecionados:lojaKeysPersistiveis(lojaDraft.produtosSelecionados,permitidas),
+    produtoCategorias:lojaMapaCategoriaPersistivel(lojaDraft.produtoCategorias,permitidas,categoriasAtivas),
+    produtoPrecos:lojaMapaTextoPersistivel(lojaDraft.produtoPrecos,permitidas,20),
+    produtoDisponibilidade:lojaMapaDisponibilidadePersistivel(lojaDraft.produtoDisponibilidade,permitidas)
+  };
+}
+function lojaAplicarConfigPersistida(cfg){
+  if(!cfg||typeof cfg!=="object")return;
+  if(cfg.versao&&cfg.versao!=="loja-visual-v1")return;
+  const permitidas=lojaProdutoKeysPermitidas();
+  if("nome" in cfg)lojaDraft.nome=lojaTextoPublico(cfg.nome,60)||lojaDraft.nome;
+  if("desc" in cfg)lojaDraft.desc=lojaTextoPublico(cfg.desc,140);
+  if("status" in cfg)lojaDraft.status=lojaTextoPublico(cfg.status,40)||lojaDraft.status;
+  if(Array.isArray(cfg.categoriasAtivas))lojaDraft.categoriasAtivas=lojaCategoriasPersistiveis(cfg.categoriasAtivas);
+  if(Array.isArray(cfg.produtosSelecionados))lojaDraft.produtosSelecionados=lojaKeysPersistiveis(cfg.produtosSelecionados,permitidas);
+  lojaDraft.produtoCategorias=lojaMapaCategoriaPersistivel(cfg.produtoCategorias,permitidas,lojaDraft.categoriasAtivas);
+  lojaDraft.produtoPrecos=lojaMapaTextoPersistivel(cfg.produtoPrecos,permitidas,20);
+  lojaDraft.produtoDisponibilidade=lojaMapaDisponibilidadePersistivel(cfg.produtoDisponibilidade,permitidas);
+  lojaDraft.categoriaAtiva="Todos";
+  lojaDraft.carrinho={};
+  lojaDraft.cliente={nome:"",whatsapp:"",entrega:"Retirada",obs:""};
+}
+function salvarConfiguracoesLoja(){
+  if(!state||!state.config){toast("Entre na conta para salvar as configurações visuais da loja.");return;}
+  state.config.lojaVisual=lojaConfigPersistivelSanitizada();
+  save();
+  toast("Configurações visuais da loja salvas.");
+}
 function lojaCarrinhoItens(){
   const produtos=lojaProdutosVisuais();
   return Object.keys(lojaDraft.carrinho||{}).map(key=>{
@@ -1234,6 +1323,12 @@ function render_loja(){
   </div>
 
   <div id="loja-publica-segura-card">${renderLojaPublicaSegura()}</div>
+
+  <div class="card loja-safe">
+    <div class="name">Configurações visuais</div>
+    <p class="hint">Salva apenas dados visuais da loja. Carrinho, cliente e pedidos não são salvos. Nada será publicado agora.</p>
+    <div class="loja-actions"><button class="btn primary" onclick="salvarConfiguracoesLoja()">Salvar configurações da loja</button></div>
+  </div>
 
   <div class="card loja-preview" id="loja-preview-box"></div>
 
