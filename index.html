@@ -816,13 +816,22 @@ function updPreco(id,key){
 /* ---------- LOJA ---------- */
 const LOJA_CATEGORIAS_SUGERIDAS=["Pronta entrega","Encomendas","Personalizados","Kits","Sobremesas","Especiais"];
 const LOJA_CATEGORIAS_MAX=6;
-const lojaDraft={nome:"Doce Encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},produtoPrecos:{},produtoDisponibilidade:{},carrinho:{},cliente:{nome:"",whatsapp:"",entrega:"Retirada",obs:""}};
-function lojaSlug(nome){
-  const slug=String(nome||"loja-confeito").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
-  return slug||"loja-confeito";
+const lojaDraft={nome:"Doce Encanto",slug:"doce-encanto",whats:"(21) 99999-9999",desc:"Doces e encomendas artesanais.",status:"Aberta para pedidos",categoriaAtiva:"Todos",categoriasAtivas:["Pronta entrega","Encomendas","Personalizados","Kits"],produtosSelecionados:[],produtoCategorias:{},produtoPrecos:{},produtoDisponibilidade:{},carrinho:{},cliente:{nome:"",whatsapp:"",entrega:"Retirada",obs:""}};
+function lojaSlugSanitizado(v){
+  const slug=String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/-+/g,"-").replace(/^-+|-+$/g,"").slice(0,40).replace(/^-+|-+$/g,"");
+  return slug||"minha-loja";
 }
-function lojaLink(){return "useconfeito.com/loja/"+lojaSlug(lojaDraft.nome);}
+function lojaSlug(nome){return lojaSlugSanitizado(nome);}
+function lojaSlugAtual(){return lojaSlugSanitizado(lojaDraft.slug||lojaDraft.nome);}
+function lojaLink(){return "useconfeito.com/loja/"+lojaSlugAtual();}
 function lojaSet(k,val){lojaDraft[k]=val;const link=document.getElementById("loja-link-modelo");if(link)link.textContent=lojaLink();renderLojaPreview();}
+function lojaSlugSet(input){
+  const slug=lojaSlugSanitizado(input&&input.value);
+  lojaDraft.slug=slug;
+  if(input)input.value=slug;
+  const link=document.getElementById("loja-link-modelo");if(link)link.textContent=lojaLink();
+  renderLojaPreview();
+}
 function lojaNormCategoria(cat){return String(cat||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();}
 function lojaCategorias(){return["Todos",...lojaDraft.categoriasAtivas];}
 function lojaCategoriaExiste(cat){const n=lojaNormCategoria(cat);return lojaCategorias().some(c=>lojaNormCategoria(c)===n);}
@@ -863,6 +872,59 @@ function lojaPublicaDadosSanitizados(){
       origem:p.origem==="Produto cadastrado"?"Produto cadastrado":"Exemplo visual"
     }))
   };
+}
+function lojaPublicavel(){
+  return Boolean(lojaTextoPublico(lojaDraft.nome,60)&&lojaSlugAtual()&&lojaProdutosSelecionados().some(p=>lojaProdutoDisponivel(p.key)));
+}
+function lojaPublicacaoPrivada(){
+  return {publicada:false,publicavel:lojaPublicavel(),status:"Em planejamento"};
+}
+const LOJA_CONTRATO_CHAVES_PROIBIDAS=["user_id","email","token","payload","config","carrinho","cliente","whatsappCliente","pedido","movs","vendas","estoque","alertaEstoque","custo","insumo","itens","margem","lucro","meuPreco","precos"];
+function lojaContratoPublicoSanitizado(){
+  const dados=lojaPublicaDadosSanitizados(),pub=lojaPublicacaoPrivada();
+  return {
+    versao:"loja-publica-v1",
+    slug:lojaSlugAtual(),
+    publicada:false,
+    publicavel:pub.publicavel,
+    loja:{
+      nome:dados.loja.nome,
+      descricao:dados.loja.descricao,
+      status:dados.loja.status,
+      categorias:dados.loja.categorias
+    },
+    produtos:dados.produtos.map(p=>({
+      nome:p.nome,
+      categoria:p.categoria,
+      preco:p.preco,
+      disponivel:p.disponivel,
+      origem:p.origem
+    })),
+    meta:{geradoEmPreview:true}
+  };
+}
+function lojaContratoPublicoSeguro(obj){
+  const proibidas=new Set(LOJA_CONTRATO_CHAVES_PROIBIDAS.map(k=>k.toLowerCase()));
+  const json=JSON.stringify(obj||{}).toLowerCase();
+  if([...proibidas].some(k=>json.indexOf(`"${k}":`)>=0))return false;
+  let seguro=true;
+  function walk(v){
+    if(!seguro||v==null)return;
+    if(Array.isArray(v)){v.forEach(walk);return;}
+    if(typeof v==="object"){
+      Object.keys(v).forEach(k=>{
+        if(proibidas.has(String(k).toLowerCase()))seguro=false;
+        walk(v[k]);
+      });
+    }
+  }
+  walk(obj);
+  return seguro;
+}
+function verificarFuturaPublicacaoLoja(){
+  const contrato=lojaContratoPublicoSanitizado();
+  const seguro=lojaContratoPublicoSeguro(contrato);
+  toast(seguro?"Estrutura segura para futura loja pública. Nada foi publicado.":"Dados internos protegidos. Revise a estrutura antes da futura publicação.");
 }
 function lojaCategoriasPersistiveis(lista){
   const out=[],seen=new Set();
@@ -918,8 +980,10 @@ function lojaConfigPersistivelSanitizada(){
   return {
     versao:"loja-visual-v1",
     nome:lojaTextoPublico(lojaDraft.nome,60),
+    slug:lojaSlugAtual(),
     desc:lojaTextoPublico(lojaDraft.desc,140),
     status:lojaTextoPublico(lojaDraft.status,40),
+    publicacao:lojaPublicacaoPrivada(),
     categoriasAtivas,
     produtosSelecionados:lojaKeysPersistiveis(lojaDraft.produtosSelecionados,permitidas),
     produtoCategorias:lojaMapaCategoriaPersistivel(lojaDraft.produtoCategorias,permitidas,categoriasAtivas),
@@ -932,6 +996,7 @@ function lojaAplicarConfigPersistida(cfg){
   if(cfg.versao&&cfg.versao!=="loja-visual-v1")return;
   const permitidas=lojaProdutoKeysPermitidas();
   if("nome" in cfg)lojaDraft.nome=lojaTextoPublico(cfg.nome,60)||lojaDraft.nome;
+  if("slug" in cfg)lojaDraft.slug=lojaSlugSanitizado(cfg.slug);
   if("desc" in cfg)lojaDraft.desc=lojaTextoPublico(cfg.desc,140);
   if("status" in cfg)lojaDraft.status=lojaTextoPublico(cfg.status,40)||lojaDraft.status;
   if(Array.isArray(cfg.categoriasAtivas))lojaDraft.categoriasAtivas=lojaCategoriasPersistiveis(cfg.categoriasAtivas);
@@ -1121,9 +1186,19 @@ function renderLojaMensagem(){
   return `<div class="loja-message"><div class="chan-name">Prévia da mensagem</div><p class="hint">Veja como a mensagem do pedido poderia aparecer futuramente.</p><div class="loja-message-box" id="loja-mensagem-preview">${esc(lojaMensagemPedidoTexto())}</div><div class="loja-cart-note">Mensagem apenas visual. Nenhum pedido será criado e nenhuma venda será registrada agora.</div><button class="btn ghost" style="width:100%;margin-top:9px" onclick="toast('Mensagem visual. Nada foi enviado pelo WhatsApp.')">Simular mensagem</button></div>`;
 }
 function renderLojaPublicaSegura(){
-  const dados=lojaPublicaDadosSanitizados();
-  const disponiveis=dados.produtos.filter(p=>p.disponivel).length;
+  const contrato=lojaContratoPublicoSanitizado();
+  const seguro=lojaContratoPublicoSeguro(contrato);
+  const disponiveis=contrato.produtos.filter(p=>p.disponivel).length;
+  const pronta=contrato.publicavel&&seguro;
   return `<div class="card loja-safe">
+    <div class="loja-check">
+      <div><b>Identificador da loja</b><br>${esc(contrato.slug)}</div>
+      <div><b>Futuro link público</b><br>${esc(lojaLink())}</div>
+    </div>
+    <div class="loja-check">
+      <div><b>Status</b><br>Em planejamento</div>
+      <div><b>Pronta para futura publicação</b><br>${pronta?"Sim":"Não"}</div>
+    </div>
     <div class="loja-products-head">
       <div><div class="name">Loja pública segura</div><p class="hint">Estamos preparando a futura loja pública com uma camada separada dos dados internos do seu negócio.</p></div>
       <span class="loja-badge">Preparação segura</span>
@@ -1134,9 +1209,11 @@ function renderLojaPublicaSegura(){
       <div><b>Continua privado</b><br>Dados internos do negócio<br>Composição das receitas<br>Movimentações do app<br>Informações de teste da prévia<br>Login e dados internos</div>
     </div>
     <div class="loja-check">
-      <div><b>Produtos preparados</b><br>${fmt(dados.produtos.length)}</div>
+      <div><b>Produtos preparados</b><br>${fmt(contrato.produtos.length)}</div>
       <div><b>Produtos disponíveis</b><br>${fmt(disponiveis)}</div>
     </div>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="verificarFuturaPublicacaoLoja()">Verificar futura publicação</button>
+    <div class="loja-category-note">${seguro?"Dados internos protegidos.":"Dados internos protegidos. Revise antes da futura publicação."}</div>
   </div>`;
 }
 function renderLojaPublicaSeguraResumo(){
@@ -1298,6 +1375,7 @@ function render_loja(){
         <option ${lojaDraft.status==="Aberta para pedidos"?"selected":""}>Aberta para pedidos</option>
         <option ${lojaDraft.status==="Fechada no momento"?"selected":""}>Fechada no momento</option>
       </select></div>
+      <div class="loja-field"><label>Identificador da loja</label><input class="loja-input" value="${esc(lojaSlugAtual())}" oninput="lojaSlugSet(this)" placeholder="doce-encanto"><div class="loja-price-note">Usado apenas para preparar o futuro link público. Nada será publicado agora.</div></div>
       <div class="loja-field"><label>Link da loja</label><div class="loja-link-row"><div class="loja-link" id="loja-link-modelo">${esc(lojaLink())}</div><button class="btn ghost sm" onclick="copiarModeloLinkLoja()">Copiar modelo de link</button></div></div>
     </div>
   </div>
